@@ -86,7 +86,8 @@ td input{padding:2px 5px}
 .dtabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .dtb{border:1px solid var(--line);background:var(--card);padding:6px 14px;border-radius:999px;cursor:pointer}.dtb.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
-.detail[data-tab=fund],.detail[data-tab=inst]{grid-template-columns:minmax(0,1fr)}.detail[data-tab=fund]{max-width:1180px}.fgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}.fside{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--bg);position:sticky;top:12px}.fside h4{margin:0 0 4px;font-size:15px}.fside .rows2{margin-top:8px}.fund.on{outline:2px solid var(--acc);outline-offset:-1px}.fuse{font-size:12px;padding:4px 0;border-top:1px dashed var(--line)}.fuse.me{font-weight:700}@media(max-width:1000px){.fgrid{grid-template-columns:1fr}.fside{position:static}}
+.detail[data-tab=fund],.detail[data-tab=inst]{grid-template-columns:minmax(0,1fr)}.detail[data-tab=fund]{max-width:1180px}.fscroll{max-height:56vh;overflow:auto;margin-top:6px;border:1px solid var(--line);border-radius:8px;background:var(--card)}.ftab{font-size:12px}.ftab th,.ftab td{padding:5px 8px}.ftab tr.sel td{background:color-mix(in srgb,var(--acc) 20%,transparent);font-weight:600}.ftab tr.pk{cursor:pointer}.ftab tr.pk:hover td{background:var(--acc2)}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;align-items:start}.fside{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--bg);position:sticky;top:12px}.fside h4{margin:0 0 4px;font-size:15px}.fside .rows2{margin-top:8px}.fund.on{outline:2px solid var(--acc);outline-offset:-1px}.fuse{font-size:12px;padding:4px 0;border-top:1px dashed var(--line)}.fuse.me{font-weight:700}@media(max-width:1000px){.fgrid{grid-template-columns:1fr}.fside{position:static}}
 .detail .sec{display:none}.detail[data-tab=info] .sec[data-sec=info],.detail[data-tab=fund] .sec[data-sec=fund],.detail[data-tab=inst] .sec[data-sec=inst]{display:block}
 .nform{display:grid;gap:8px;padding:12px}.nform textarea,.ncard textarea{width:100%;box-sizing:border-box;min-height:70px;resize:vertical;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}.nform .nr{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.nform select{max-width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}.ncard{padding:10px 12px;border-bottom:1px solid var(--line)}.ncard:last-child{border-bottom:0}.nh{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--sub)}.nh .sp{flex:1}.nlink{cursor:pointer;color:var(--acc);text-decoration:underline}.ndel{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px}.ndel:hover{border-color:var(--danger);color:var(--danger)}
 .cset{display:grid;gap:5px;margin-top:6px}.cset label{font-size:11px;color:var(--sub);margin-top:4px}.cset input{width:100%;box-sizing:border-box;font:inherit;font-size:12px;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
@@ -220,16 +221,38 @@ const fIns=(m,f)=>fRanged(f)&&m.inst?m.inst.filter(i=>i.n>=+f.n1&&i.n<=+f.n2):[]
 const fAmt=(m,f)=>fRanged(f)?Math.max(0,+f.n2-+f.n1+1)*(+m.amount||0):(+f.amt||0);
 function fUnapply(m,f){if(f.done||!f.date)return;fIns(m,f).forEach(i=>{if(!i.paid&&i.act===f.date)i.act=i.plan})}
 function fApply(m,f){f.amt=fAmt(m,f);if(f.done||!f.date)return;fIns(m,f).forEach(i=>{if(!i.paid)i.act=f.date})}
-function fsideHtml(m){const k=S.fk!=null&&m.funds[S.fk]?S.fk:m.funds.length-1,f=m.funds[k],s=f&&get(f.from);
- if(!s)return '<div class="sub">출처 만기금을 고르면 그 적금·예금의 만기 정보와 다른 곳에 배분한 내역이 여기에 나옵니다.</div>';
- const M=mat(s),uses=DATA.flatMap(x=>x.funds.filter(g=>g.from===s.id).map(g=>({x,g,a:fAmt(x,g)}))),sum=uses.reduce((a,u)=>a+u.a,0);
- return `<div class="sub">선택한 출처</div><h4>${esc(s.bank)} ${esc(s.branch)}</h4><div class="sub">${esc(s.product||'')} · ${s.kind} ${termN(s)}개월</div>
- <div class="rows2"><span>가입일 ~ 만기일</span><span class="v">${s.start}${dwHtml(s.start)} ~ ${s.end}${dwHtml(s.end)}</span><span>만기금액</span><b class="v">${won(M)}원${s.actualMaturity==null?' <span class="pill">계산</span>':''}</b>${s.inst?`<span>납입 진행</span><span class="v">${paidCnt(s)}/${s.inst.length}회</span>`:''}<span>배분 합계</span><span class="v">${won(sum)}원</span><span>남은 만기금</span><b class="v ${M-sum<0?'neg':''}">${won(M-sum)}원</b></div>
- <div style="margin-top:10px"><div class="sub" style="margin-bottom:2px">이 만기금의 사용처 (${uses.length}건)</div>${uses.map(u=>`<div class="fuse ${u.x.id===m.id&&u.g===f?'me':''}">→ ${u.x.id===m.id?'이 적금':`<span class="nlink" data-a="goto" data-id="${u.x.id}">${esc(u.x.branch)}</span>`}${fRanged(u.g)?` ${u.g.n1}~${u.g.n2}회`:''}${u.g.date?` · ${u.g.date}`:''} · ${won(u.a)}원 ${u.g.done?'<span class="pill ok">완료</span>':'<span class="pill">예정</span>'}</div>`).join('')}</div>
- <div style="margin-top:10px"><span class="nlink" data-a="goto" data-id="${s.id}">${esc(s.branch)} 상세 보기 →</span></div>`}
-function fFocus(k){if(S.view!=='detail'||S.dtab!=='fund')return;const m=get(S.sel);if(!m||S.fk===k)return;S.fk=k;document.querySelectorAll('.fund[data-k]').forEach(e=>e.classList.toggle('on',+e.dataset.k===k));const p=$('fside');if(p)p.innerHTML=fsideHtml(m)}
-document.addEventListener('focusin',e=>{const d=e.target.closest&&e.target.closest('.fund[data-k]');if(d)fFocus(+d.dataset.k)});
-document.addEventListener('mousedown',e=>{const d=e.target.closest&&e.target.closest('.fund[data-k]');if(d)fFocus(+d.dataset.k)});
+const outsOf=m=>DATA.flatMap(x=>x.funds.filter(f=>f.from===m.id).map(f=>({x,f}))).sort((a,b)=>a.x.end.localeCompare(b.x.end)||a.x.id-b.x.id);
+const targetsOf=m=>DATA.filter(x=>x.id!==m.id&&status(x)==='진행'&&x.end>m.end&&(x.kind==='적금'||x.start>=m.end)).sort((a,b)=>a.end.localeCompare(b.end));
+const tLabel=t=>`${esc(t.branch)} ${esc(t.product)} · ${t.kind} ${termN(t)}개월 · ${t.end} 만기 · ${t.kind==='적금'?'월 '+man(t.amount):man(t.amount)}`;
+function selOut(m){const o=outsOf(m);if(S.outDraft)return null;return o.find(u=>u.f===S.ff)||o[o.length-1]||null}
+const firstFree=x=>{const u=x.inst?x.inst.find(i=>!i.paid&&!srcOfInst(x,i.n)):null;return u?u.n:null};
+function outRow(m,u,k,tg,sel){const {x,f}=u,dis=f.done?'disabled':'',bad=fBad(x,f);
+ return `<div class="fund ${f.done?'done':''} ${f===sel?'on':''}" data-uk="${k}"><div class="fr"><span class="sub">→ 넣을 적금</span><select data-uk="${k}" data-uf="to" ${dis}>${(tg.includes(x)?tg:tg.concat([x])).map(t=>`<option value="${t.id}" ${t===x?'selected':''}>${tLabel(t)}</option>`).join('')}</select></div>
+ <div class="fa">${f.done?'<span class="pill ok">납입 완료</span>':'<span class="pill">예정</span>'}</div>
+ <div class="fr">${x.inst?`<input type="number" min="1" max="${x.inst.length}" data-uk="${k}" data-uf="n1" value="${f.n1??''}" placeholder="시작" ${dis}>~<input type="number" min="1" max="${x.inst.length}" data-uk="${k}" data-uf="n2" value="${f.n2??''}" placeholder="끝" ${dis}><span class="sub">회차를 (총 ${x.inst.length}회)</span> <input type="date" data-uk="${k}" data-uf="date" value="${f.date||''}" min="${m.end}" max="${addD(x.end,-1)}" ${dis}>${dwHtml(f.date)}<span class="sub">에 납입</span> <span class="sub">= ${fRanged(f)?(+f.n2-+f.n1+1)+'회분 ':''}<b style="color:var(--ink)">${won(fAmt(x,f))}원</b></span>`:`<span class="sub">금액</span> <input data-uk="${k}" data-uf="amt" data-t="money" value="${f.amt?won(f.amt):''}" placeholder="금액" style="width:140px" ${dis}> <span class="sub">날짜</span> <input type="date" data-uk="${k}" data-uf="date" value="${f.date||''}" min="${m.end}" ${dis}>`}</div>
+ ${bad?`<div class="neg" style="grid-column:1/-1;font-size:12px">⚠ ${bad}</div>`:''}<div class="fa">${x.inst&&fRanged(f)&&f.date&&!bad?(f.done?`<button class="btn sm" data-a="outUndo" data-uk="${k}">확인 취소</button>`:(f.date>todayS?`<button class="btn sm" disabled title="납입일(${f.date})이 지나야 확인할 수 있습니다">${diff(f.date,todayS)}일 뒤 확인</button>`:`<button class="btn sm primary" data-a="outDone" data-uk="${k}">납입 확인</button>`)):''}<button class="btn sm" data-a="outDel" data-uk="${k}" ${f.done?'disabled title="확인 취소 후 삭제할 수 있습니다"':''}>삭제</button></div></div>`}
+function outHtml(m){const outs=outsOf(m),M=mat(m),sum=outs.reduce((a,u)=>a+fAmt(u.x,u.f),0),tg=targetsOf(m),sel=selOut(m);
+ return `<div class="rows2" style="max-width:520px;margin-bottom:10px"><span>만기일</span><b class="v">${m.end}${dwHtml(m.end)}</b><span>만기금액</span><b class="v">${won(M)}원${m.actualMaturity==null?' <span class="pill">계산</span>':''}</b><span>배분 합계</span><span class="v">${won(sum)}원</span><span>남은 만기금</span><b class="v ${M-sum<0?'neg':''}">${won(M-sum)}원</b></div>
+ <div class="fgrid"><div>${outs.map((u,k)=>outRow(m,u,k,tg,sel)).join('')}
+ ${S.outDraft?`<div class="fund on"><div class="fr"><span class="sub">→ 넣을 적금</span><select data-uf="newto"><option value="">적금 선택…</option>${tg.map(t=>`<option value="${t.id}">${tLabel(t)}</option>`).join('')}</select></div><div class="fa"><button class="btn sm" data-a="cancelOut">취소</button></div></div>`:''}
+ ${tg.length?(S.outDraft?'':'<button class="btn sm" data-a="addOut">+ 배분 추가</button>'):`<div class="note neg">이 ${m.kind}(${m.end} 만기)보다 늦게 만기되는 진행 중 적금이 없어 배분할 곳이 없습니다.</div>`}
+ ${status(m)==='진행'?`<label class="note" style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" data-f="fund" data-t="chk" ${m.fund?'checked':''}> 남은 만기금을 월별 자금 흐름의 만기금 잔액에 포함하기</label>`:''}
+ </div><aside class="fside" id="fside">${tpanelHtml(m)}</aside></div>`}
+function tpanelHtml(m){const u=selOut(m);
+ if(!u)return `<div class="sub">${S.outDraft?'만기금을 넣을 적금을 고르면 그 적금의 회차가 여기에 나옵니다.':'<b>+ 배분 추가</b>로 만기금을 넣을 적금을 고르면 그 적금의 회차가 여기에 나옵니다.'}</div>`;
+ const {x,f}=u,canPick=x.inst&&!f.done;
+ return `<div class="sub">선택한 적금</div><h4>${esc(x.bank)} ${esc(x.branch)}</h4><div class="sub">${esc(x.product||'')} · ${x.kind} ${termN(x)}개월 · ${x.kind==='적금'?'월 '+won(x.amount)+'원':won(x.amount)+'원'}</div>
+ <div class="rows2"><span>가입일 ~ 만기일</span><span class="v">${x.start}${dwHtml(x.start)} ~ ${x.end}${dwHtml(x.end)}</span>${x.inst?`<span>납입 진행</span><span class="v">${paidCnt(x)}/${x.inst.length}회 · 미납 ${x.inst.length-paidCnt(x)}회</span>`:''}</div>
+ ${x.inst?`<div class="sub" style="margin-top:8px">${canPick?'회차를 누르면 시작, 한 번 더 누르면 끝 회차로 지정됩니다.':'납입 완료된 배분은 확인 취소 후 고칠 수 있습니다.'}</div><div class="fscroll" id="fscroll"><table class="ftab"><thead><tr><th class="l">회차</th><th>예정일</th><th>실제(예정)</th><th>납입</th><th class="l">재원</th></tr></thead><tbody>${x.inst.map(i=>{const g=srcOfInst(x,i.n),s=g&&get(g.from),on=g===f;return `<tr class="${on?'sel':''} ${canPick?'pk':''}" ${canPick?`data-a="pickN" data-n="${i.n}"`:''}><td class="l">${i.n}회</td><td>${i.plan}</td><td>${i.act||'-'}</td><td>${i.paid?'✓':''}</td><td class="l">${s?`<span class="pill ${g.done?'ok':''}">${on?'이 배분':esc(s.branch)}</span>`:''}</td></tr>`}).join('')}</tbody></table></div>`:''}
+ <div style="margin-top:8px"><span class="nlink" data-a="goto" data-id="${x.id}">${esc(x.branch)} 상세 보기 →</span></div>`}
+function inHtml(m){if(!m.funds.length)return '';
+ return `<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px"><h4 style="margin:0 0 6px">이 ${m.kind}에 들어오는 만기금</h4>${m.funds.map((f,k)=>{const s=get(f.from);return `<div class="note">← ${s?`<span class="nlink" data-a="goto" data-id="${s.id}" data-tab="fund">${esc(s.branch)} ${esc(s.product)} 만기금</span>`:'(출처 없음)'}${fRanged(f)?` · ${f.n1}~${f.n2}회`:''}${f.date?` · ${f.date}`:''} · ${won(fAmt(m,f))}원 ${f.done?'<span class="pill ok">납입 완료</span>':'<span class="pill">예정</span>'}${s?'':` <button class="btn sm" data-a="delIn" data-k="${k}">삭제</button>`}</div>`}).join('')}<div class="note">고치려면 출처 적금의 재원 탭(이름을 누르면 이동)에서 고칩니다.</div></div>`}
+function fscrollTo(){if(!S.fscroll)return;S.fscroll=false;const c=$('fscroll'),r=c&&c.querySelector('tr.sel');if(c)c.scrollTop=r?Math.max(0,r.offsetTop-70):0}
+function fFocus(k){if(S.view!=='detail'||S.dtab!=='fund')return;const m=get(S.sel),u=m&&outsOf(m)[k];if(!u||S.ff===u.f)return;S.ff=u.f;S.outDraft=false;S.pickEnd=false;document.querySelectorAll('.fund[data-uk]').forEach(e=>e.classList.toggle('on',+e.dataset.uk===k));const p=$('fside');if(p){p.innerHTML=tpanelHtml(m);S.fscroll=true;fscrollTo()}}
+document.addEventListener('focusin',e=>{const d=e.target.closest&&e.target.closest('.fund[data-uk]');if(d)fFocus(+d.dataset.uk)});
+document.addEventListener('mousedown',e=>{const d=e.target.closest&&e.target.closest('.fund[data-uk]');if(d)fFocus(+d.dataset.uk)});
+const addD=(s,k)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+k);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+function fBad(m,f){const s=get(f.from);if(!s||!f.date)return '';if(f.date<s.end)return `출처 만기일(${s.end}) 전에는 만기금을 쓸 수 없습니다.`;if(f.date>=m.end)return `넣을 적금의 만기일(${m.end}) 전에 내야 합니다.`;return ''}
 const srcOfInst=(m,n)=>m.funds.find(f=>fRanged(f)&&n>=+f.n1&&n<=+f.n2);
 const allocOf=id=>DATA.reduce((s,x)=>s+x.funds.filter(f=>f.from===id).reduce((a,f)=>a+(+f.amt||0),0),0);
 
@@ -336,16 +359,9 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
  <tr><td class="l"><b>만기금액</b></td><td><b>${won(c.total)}</b></td><td><input data-f="actualMaturity" data-t="money" value="${m.actualMaturity!=null?won(m.actualMaturity):''}" placeholder="비우면 계산값 사용"></td></tr></tbody></table>
  <div class="note">${dm==null?'실제 만기금액을 입력하면 그 값이 우선 사용됩니다.':`계산값과 실제값의 차이: <b class="${Math.abs(dm)>3000?'neg':''}">${sg(Math.round(dm))}원</b>`}${m.kind==='적금'?' · 단리 월적금 기준 계산이며 선납·이연 일수는 반영하지 않습니다.':''}</div></div>
 
- <div class="box sec" data-sec="fund"><h3>재원 (만기금으로 납입)</h3>
- <div class="sub" style="margin-bottom:8px">${m.inst?'<b>출처</b>(다른 적금·예금의 만기금)를 고르고, <b>이 적금</b>의 몇 회차를 언제 낼지 적습니다. 날짜를 넣으면 그 회차들의 실제(예정) 납입일이 바뀌고, 실제로 낸 뒤 <b>납입 확인</b>을 누르면 회차가 납입 처리됩니다.':'이 예금에 들어간 만기금을 금액으로 적습니다.'}</div>
- <div class="fgrid"><div> ${m.funds.map((f,k)=>{const s=get(f.from),dis=f.done?'disabled':'';return `<div class="fund ${f.done?'done':''} ${k===(S.fk!=null&&m.funds[S.fk]?S.fk:m.funds.length-1)?'on':''}" data-k="${k}"><div class="fr"><span class="sub">출처</span><select data-fk="${k}" data-ff="from" ${dis}><option value="">출처 만기금 선택…</option>${sources.filter(s=>status(s)==='진행'||s.id===f.from).map(s=>`<option value="${s.id}" ${s.id===f.from?'selected':''}>${esc(s.branch)} ${esc(s.product)} · ${s.kind} ${termN(s)}개월 · ${s.end} 만기 · ${man(mat(s))}</option>`).join('')}</select></div>
-  <div class="fa">${f.done?'<span class="pill ok">납입 완료</span>':'<span class="pill">예정</span>'}</div>
-  <div class="fr">${m.inst?`<span class="sub">→ 이 적금(총 ${m.inst.length}회)의</span> <input type="number" min="1" max="${m.inst.length}" data-fk="${k}" data-ff="n1" value="${f.n1??''}" placeholder="시작" ${dis}>~<input type="number" min="1" max="${m.inst.length}" data-fk="${k}" data-ff="n2" value="${f.n2??''}" placeholder="끝" ${dis}><span class="sub">회차를</span> <input type="date" data-fk="${k}" data-ff="date" value="${f.date||''}" ${dis}>${dwHtml(f.date)}<span class="sub">에 납입</span> <span class="sub">= ${fRanged(f)?(+f.n2-+f.n1+1)+'회분 ':''}<b style="color:var(--ink)">${won(fAmt(m,f))}원</b></span>`:`금액 <input data-fk="${k}" data-ff="amt" data-t="money" value="${f.amt?won(f.amt):''}" placeholder="금액" style="width:140px"> · 날짜 <input type="date" data-fk="${k}" data-ff="date" value="${f.date||''}">`}</div>
-  <div class="fa">${m.inst&&fRanged(f)&&f.date&&f.from?(f.done?`<button class="btn sm" data-a="fundUndo" data-k="${k}">확인 취소</button>`:`<button class="btn sm primary" data-a="fundDone" data-k="${k}">납입 확인</button>`):''}<button class="btn sm" data-a="delFund" data-k="${k}" ${f.done?'disabled title="확인 취소 후 삭제할 수 있습니다"':''}>삭제</button></div></div>`}).join('')}
- <button class="btn sm" data-a="addFund">+ 재원 추가</button></div><aside class="fside" id="fside">${fsideHtml(m)}</aside></div>
- ${status(m)==='진행'?`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><div class="rows2"><span>이 항목의 만기금액</span><b class="v">${won(M)}원</b><span>다른 항목에 배분한 금액</span><span class="v">${won(alloc)}원</span><span>아직 배분 안 한 잔액</span><b class="v ${M-alloc<0?'neg':''}">${won(M-alloc)}원</b></div>
- ${used.map(u=>`<div class="note">→ <span class="nlink" data-a="goto" data-id="${u.to.id}">${esc(u.to.branch)} ${esc(u.to.product)}</span>${fRanged(u.f)?` ${u.f.n1}~${u.f.n2}회`:''}${u.f.date?` · ${u.f.date}`:''} · ${won(u.amt)}원 ${u.f.done?'<span class="pill ok">납입 완료</span>':'<span class="pill">예정</span>'}</div>`).join('')}
- <label class="note" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="fund" data-t="chk" ${m.fund?'checked':''}> 만기금을 월별 자금 흐름의 만기금 잔액에 포함하기</label></div>`:''}</div>
+ <div class="box sec" data-sec="fund"><h3>만기금 배분 <span class="sub" style="font-weight:400">· 이 ${m.kind}의 만기금을 어느 적금의 몇 회차에 넣을지 정합니다</span></h3>
+ ${outHtml(m)}
+ ${inHtml(m)}</div>
  <div class="sec" data-sec="inst">
  ${m.inst?`<div class="box"><h3>선납이연 규칙 입력</h3><div class="sub">회차를 묶음으로 나눠 숫자로 적습니다. 예) 12회 적금 <b>1-6-5</b>, <b>1-11</b> / 36회 적금 <b>1-12-12-11</b> (합계 = 총 ${m.inst.length}회)</div>
   <div style="display:flex;gap:8px;margin-top:8px"><input id="rule" placeholder="1-6-5" value="${esc(S.rule)}" style="max-width:220px"><button class="btn sm" data-a="applyRule">날짜 적용</button><button class="btn sm" data-a="resetRule">정상 납입으로 되돌리기</button></div>
@@ -364,8 +380,8 @@ function ruleInfo(m){const el=$('ruleInfo');if(!el)return;const p=parseRule(m);i
 function applyRule(m){const p=parseRule(m);if(!p)return toast('규칙을 1-6-5 형태로 적어 주세요.',true);const sum=p.reduce((a,b)=>a+b,0);if(sum!==m.inst.length)return toast('묶음 합계('+sum+')가 총 회차('+m.inst.length+')와 다릅니다.',true);
  const dates=[...document.querySelectorAll('[data-rd]')].map(e=>e.value);if(dates.some(d=>!d))return toast('모든 묶음의 납입일을 입력해 주세요.',true);
  ask({title:'납입일을 규칙대로 채울까요?',body:`<b>${esc(S.rule)}</b> 규칙으로 <b>미납 ${m.inst.filter(i=>!i.paid).length}개 회차</b>의 실제(예정) 납입일을 덮어씁니다.\n납입 완료된 회차는 날짜가 바뀌지 않습니다.`,ok:'날짜 적용'},()=>{let i=0;p.forEach((s,k)=>{for(let j=0;j<s;j++){const x=m.inst[i++];if(!x.paid)x.act=dates[k]}});toast('납입일을 채웠습니다.');keep(detail)})}
-const SCR='.tscroll,.pscroll,.daypanel,.mts';
-function keep(fn){const y=window.scrollY,sc=[...document.querySelectorAll(SCR)].map(e=>[e.scrollTop,e.scrollLeft]);fn();phead();kpis();updTabs();document.querySelectorAll(SCR).forEach((e,i)=>{if(sc[i]){e.scrollTop=sc[i][0];e.scrollLeft=sc[i][1]}});window.scrollTo(0,y);persist()}
+const SCR='.tscroll,.pscroll,.daypanel,.mts,.fscroll';
+function keep(fn){const y=window.scrollY,sc=[...document.querySelectorAll(SCR)].map(e=>[e.scrollTop,e.scrollLeft]);fn();phead();kpis();updTabs();document.querySelectorAll(SCR).forEach((e,i)=>{if(sc[i]){e.scrollTop=sc[i][0];e.scrollLeft=sc[i][1]}});window.scrollTo(0,y);fscrollTo();persist()}
 
 function flow(){const months={},mk=s=>s.slice(0,7),cur=mk(todayS);
  const ensure=k=>months[k]||(months[k]={out:0,late:0,inn:0,items:[]});
@@ -389,6 +405,7 @@ function warns(){const w=[];DATA.filter(m=>status(m)==='진행').forEach(m=>{con
  if(m.actualMaturity!=null){const d=m.actualMaturity-calc(m).total,k='mat:'+Math.round(d);if(Math.abs(d)>3000&&!(m.ack||[]).includes(k))add('warn',`계산 만기금액과 실제 값이 ${sg(Math.round(d))}원 차이납니다. (선납·이연, 우대금리, 이자 방식 확인) 실제 값이 맞으면 "확인 완료"를 누르세요.`,k)}
  const al=allocOf(m.id),M=mat(m);if(al>M)add('bad',`배분한 재원(${won(al)}원)이 만기금액(${won(M)}원)보다 큽니다.`)});
  DATA.forEach(m=>{const nm=m.branch+' '+m.product,seen={};m.funds.forEach(f=>{if(!f.from||!fAmt(m,f))w.push({id:m.id,lv:'warn',t:'재원 연결의 출처나 회차가 비어 있습니다.',name:nm});
+  if(fBad(m,f))w.push({id:m.id,lv:'bad',t:'재원 납입일 오류: '+fBad(m,f),name:nm});
   if(fRanged(f)&&!f.done&&f.date&&f.date<todayS)w.push({id:m.id,lv:'bad',t:`만기금 납입 예정일(${f.date})이 지났습니다. 실제로 냈으면 재원 탭에서 "납입 확인"을 눌러 주세요. (${f.n1}~${f.n2}회)`,name:nm});
   fIns(m,f).forEach(i=>{if(seen[i.n])w.push({id:m.id,lv:'bad',t:`${i.n}회차가 재원 연결 두 곳에 겹쳐 있습니다.`,name:nm});seen[i.n]=1})})});
  return w}
@@ -407,7 +424,7 @@ function nm(m){return (m.bank+' '+m.branch+' '+(m.product||'')).trim()}
 function memo(){const opts='<option value="">(연결 안 함)</option>'+DATA.map(m=>`<option value="${m.id}" ${String(ndraft.link)===String(m.id)?'selected':''}>${esc(nm(m))} · ${m.end}</option>`).join('');
  const list=NOTES.slice().sort((a,b)=>b.id-a.id).map(n=>{const m=n.link?get(+n.link):null;return `<div class="ncard"><div class="nh"><span>${esc(n.date)}</span>${m?`<span class="nlink" data-a="goto" data-id="${m.id}">${esc(nm(m))}</span>`:''}<span class="sp"></span><button class="ndel" data-a="noteDel" data-nid="${n.id}">삭제</button></div><textarea data-nid="${n.id}" placeholder="메모 내용">${esc(n.text)}</textarea></div>`}).join('');
  $('view').innerHTML=`<div class="card" style="margin-bottom:12px"><div class="nform"><textarea id="ntext" placeholder="적금 관련 내용을 간단히 적어 두세요. 예) 11월 만기금은 신규 12개월 적금에 쓰기">${esc(ndraft.text)}</textarea><div class="nr"><select id="nlink">${opts}</select><button class="btn" data-a="noteAdd" style="margin-left:auto">메모 저장</button></div></div></div><div class="card pscroll hp">${list||'<div style="padding:20px" class="sub">저장된 메모가 없습니다.</div>'}</div><div class="note">메모는 최신 순으로 보입니다. 내용을 고치면 바로 저장되고, 적금과 연결해 두면 이름을 눌러 상세로 갈 수 있습니다.</div>`}
-function go(){({dash,list,detail,flow,check,memo,new:newForm})[S.view]();phead();kpis();updTabs();persist()}
+function go(){({dash,list,detail,flow,check,memo,new:newForm})[S.view]();fscrollTo();phead();kpis();updTabs();persist()}
 
 /* ---------- 이벤트 ---------- */
 function regen(m,after){const dirty=m.inst&&m.inst.some(i=>i.paid||i.act!==i.plan);
@@ -429,6 +446,14 @@ document.addEventListener('change',e=>{const el=e.target,m=get(S.sel);
   m[f]=v;keep(detail);return}
  if(el.dataset.i!==undefined){const i=m.inst[+el.dataset.i];if(el.dataset.if==='auto'){i.auto=el.checked;keep(detail);return}if(el.dataset.if==='paid')setPaid(m,i,el.checked);else{if(i.paid)return;i.act=el.value||null}keep(detail);return}
  if(el.dataset.p!==undefined){const p=m.perks[+el.dataset.p],f=el.dataset.pf;if(f==='checked')p.checked=el.checked;else if(f==='add')p.add=parseFloat(el.value)||0;else if(f==='need')p.need=Math.max(0,parseInt(el.value)||0);else p.name=el.value;keep(detail);return}
+ if(el.dataset.uf!==undefined){const uf=el.dataset.uf;
+  if(uf==='newto'){const x=get(+el.value);if(!x)return;const n=firstFree(x),f={from:m.id,n1:n,n2:n,date:m.end,done:false,amt:0};x.funds.push(f);fApply(x,f);S.outDraft=false;S.ff=f;S.pickEnd=false;S.fscroll=true;return keep(detail)}
+  const u=outsOf(m)[+el.dataset.uk];if(!u)return;const {x,f}=u;S.ff=f;if(f.done)return;
+  if(uf==='to'){const nx=get(+el.value);if(!nx||nx===x)return;fUnapply(x,f);x.funds.splice(x.funds.indexOf(f),1);const n=firstFree(nx);f.n1=f.n2=n;nx.funds.push(f);fApply(nx,f);S.fscroll=true;S.pickEnd=false;return keep(detail)}
+  fUnapply(x,f);
+  if(uf==='n1'||uf==='n2'){const N=x.inst?x.inst.length:0;let v=el.value===''?null:Math.min(N,Math.max(1,parseInt(el.value)||1));f[uf]=v;if(uf==='n1'&&v!=null&&(f.n2==null||f.n2===''||+f.n2<v))f.n2=v;if(uf==='n2'&&v!=null&&f.n1!=null&&f.n1!==''&&v<+f.n1)f.n1=v;S.fscroll=true}
+  else if(uf==='date')f.date=el.value||'';else f.amt=parseFloat(el.value.replace(/,/g,''))||0;
+  fApply(x,f);keep(detail);return}
  if(el.dataset.fk!==undefined){S.fk=+el.dataset.fk;const f=m.funds[+el.dataset.fk],ff=el.dataset.ff;if(f.done)return;fUnapply(m,f);
   if(ff==='from'){f.from=el.value?+el.value:null;const s=get(f.from);if(s&&!f.date)f.date=s.end}
   else if(ff==='n1'||ff==='n2'){const N=m.inst?m.inst.length:0;let v=el.value===''?null:Math.min(N,Math.max(1,parseInt(el.value)||1));f[ff]=v;if(ff==='n1'&&v!=null&&(f.n2==null||f.n2==='' ||+f.n2<v))f.n2=v;if(ff==='n2'&&v!=null&&f.n1!=null&&f.n1!==''&&v<+f.n1)f.n1=v}
@@ -440,20 +465,28 @@ document.addEventListener('input',e=>{if(e.target.id==='ntext')ndraft.text=e.tar
 document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('[data-f],[data-a],[data-t],tr.row,.w,.chip,.day');if(!el)return;
  if(el.classList.contains('chip')){S.filter=el.dataset.f;return go()}
  if(el.classList.contains('day')){S.day=el.dataset.d;const o=new Date(S.day);if(o.getMonth()!==S.cal.m){S.cal={y:o.getFullYear(),m:o.getMonth()}}return keep(dash)}
- if(el.matches('tr.row,.w')){S.from=S.view==='detail'?S.from:S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.fk=null;S.dtab='info';window.scrollTo(0,0);return go()}
+ if(el.matches('tr.row,.w')){S.from=S.view==='detail'?S.from:S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.ff=null;S.outDraft=false;S.pickEnd=false;S.fscroll=true;S.dtab='info';window.scrollTo(0,0);return go()}
  const a=el.dataset.a,m=get(S.sel);if(!a)return;
  if(a==='ack'){const x=get(+el.dataset.id);if(!x)return;if(el.dataset.k==='gen')x.generated=false;if(el.dataset.k==='prog')x.excelProg=null;if(el.dataset.k.startsWith('mat:'))x.ack=[...(x.ack||[]).filter(s=>!s.startsWith('mat:')),el.dataset.k];toast('확인 완료로 표시했습니다.');return keep(check)}
  if(a==='newItem'){S.draft=mkDraft('적금');S.from='list';S.view='new';window.scrollTo(0,0);return go()}
  if(a==='create'){const d=S.draft;if(!d.branch.trim())return toast('지점(또는 이름)을 입력해 주세요.',true);if(!(d.amount>0))return toast('금액을 입력해 주세요.',true);d.id=NEXT++;d.end=addM(d.start,termN(d));d.inst=d.kind==='적금'?genInst(d):null;DATA.push(d);S.sel=d.id;S.view='detail';S.from='list';S.dtab='info';S.rule='';S.draft=null;toast(d.kind+'을 등록했습니다.');window.scrollTo(0,0);return go()}
  if(a==='dtab'){S.dtab=el.dataset.k;return keep(detail)}
  if(a==='tgl'){const k=el.dataset.key;S.open[k]=!S.openDef[k];return keep(dash)}
- if(a==='goto'){S.from=S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.fk=null;S.dtab='info';window.scrollTo(0,0);return go()}
+ if(a==='goto'){S.from=S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.ff=null;S.outDraft=false;S.pickEnd=false;S.fscroll=true;S.dtab=el.dataset.tab||'info';window.scrollTo(0,0);return go()}
  if(a==='grpPay'){const mm=get(+el.dataset.id),date=$('gd-'+el.dataset.id).value;if(!date)return toast('납입한 날짜를 입력해 주세요.',true);const its=mm.inst.filter(i=>!i.paid&&(i.act||i.plan)===S.day);if(!its.length)return;
   return ask({title:'일괄 납입 처리할까요?',body:`<b>${esc(mm.branch)} ${esc(mm.product)}</b>\n<b>${its.length}개 회차</b>(${its[0].n}~${its[its.length-1].n}회, ${won(mm.amount*its.length)}원)를 <b>${date}</b> 납입으로 처리합니다.`,ok:its.length+'회 납입 처리'},()=>{its.forEach(i=>{i.act=date;setPaid(mm,i,true)});toast('납입 처리했습니다.');keep(dash)})}
  if(a==='calMonth'){const mi=+el.dataset.k;S.cal={y:S.cal.y,m:mi};S.day=(S.cal.y===TODAY.getFullYear()&&mi===TODAY.getMonth())?todayS:'';return go()}
  if(a==='calPrev'||a==='calNext'||a==='calToday'){const c=S.cal;if(a==='calToday'){S.cal={y:TODAY.getFullYear(),m:TODAY.getMonth()};S.day=todayS}else{const d=new Date(c.y,c.m+(a==='calNext'?1:-1),1);S.cal={y:d.getFullYear(),m:d.getMonth()};S.day=''}return go()}
  if(a==='noteAdd'){const tx=($('ntext').value||'').trim();if(!tx)return toast('메모 내용을 입력해 주세요.',true);NOTES.push({id:Math.max(0,...NOTES.map(n=>n.id))+1,date:todayS,text:tx,link:$('nlink').value||''});ndraft={text:'',link:''};persistNotes();toast('메모를 저장했습니다.');return go()}
  if(a==='noteDel'){const id=+el.dataset.nid;return ask({title:'이 메모를 삭제할까요?',body:esc((NOTES.find(n=>n.id===id)||{text:''}).text.slice(0,80)),ok:'삭제',danger:true},()=>{NOTES=NOTES.filter(n=>n.id!==id);persistNotes();go()})}
+ if(a==='addOut'){S.outDraft=true;S.ff=null;return keep(detail)}
+ if(a==='cancelOut'){S.outDraft=false;return keep(detail)}
+ if(a==='pickN'){const u=selOut(m);if(!u||u.f.done)return;const {x,f}=u,n=+el.dataset.n;fUnapply(x,f);if(!S.pickEnd||f.n1==null){f.n1=f.n2=n;S.pickEnd=true}else{if(n<+f.n1){f.n2=f.n1;f.n1=n}else f.n2=n;S.pickEnd=false}fApply(x,f);return keep(detail)}
+ if(a==='outDone'){const u=outsOf(m)[+el.dataset.uk];if(!u)return;const {x,f}=u,ins=fIns(x,f);if(f.date>todayS)return toast('납입일이 지난 뒤에 확인할 수 있습니다.',true);if(!ins.length)return toast('회차 범위를 확인해 주세요.',true);
+  return ask({title:'만기금 납입을 확인할까요?',body:`<b>${esc(m.branch)} ${esc(m.product)}</b> 만기금으로\n<b>${esc(x.branch)} ${f.n1}~${f.n2}회</b> (${ins.length}회분 ${won(fAmt(x,f))}원)를 <b>${f.date}</b> 납입으로 처리합니다.`,ok:ins.length+'회 납입 처리'},()=>{ins.forEach(i=>{i.act=f.date;i.paid=true;i.auto=false});f.done=true;f.amt=fAmt(x,f);toast('납입 처리했습니다.');keep(detail)})}
+ if(a==='outUndo'){const u=outsOf(m)[+el.dataset.uk];if(!u)return;const {x,f}=u;return ask({title:'납입 확인을 취소할까요?',body:`${esc(x.branch)} ${f.n1}~${f.n2}회의 납입 체크를 해제하고 예정 상태로 되돌립니다.`,ok:'확인 취소',danger:true},()=>{fIns(x,f).forEach(i=>{i.paid=false;i.auto=false;i.act=f.date});f.done=false;keep(detail)})}
+ if(a==='outDel'){const u=outsOf(m)[+el.dataset.uk];if(!u||u.f.done)return;const {x,f}=u;fUnapply(x,f);x.funds.splice(x.funds.indexOf(f),1);S.ff=null;return keep(detail)}
+ if(a==='delIn'){m.funds.splice(+el.dataset.k,1);return keep(detail)}
  if(a==='back'){S.view=S.from||'list';S.from=null;return go()}
  if(a==='dup')return ask({title:'같은 조건으로 복제할까요?',body:`<b>${esc(m.branch)}</b> ${esc(m.product)} · ${m.term}개월 · ${won(m.amount)}원 · 기본금리 ${m.baseRate}%\n새 항목의 가입일(첫 납입일)\n<input type="date" id="cpDate" value="${todayS}" style="width:170px;margin-top:6px">`,ok:'복제'},()=>{const d=$('cpDate').value||todayS;const c=JSON.parse(JSON.stringify(m));c.id=NEXT++;c.start=d;c.end=addM(d,termN(c));c.actualMaturity=null;c.funds=[];c.memo='';c.after='';c.payplan='';c.excelProg=null;c.generated=false;c.autoCount=0;c.fund=true;c.perks.forEach(p=>p.checked=false);c.inst=c.kind==='적금'?genInst(c):null;DATA.push(c);S.sel=c.id;S.dtab='info';S.rule='';toast('복제했습니다. 가입일과 필요한 값을 확인해 주세요.');keep(detail)})
  if(a==='del')return ask({title:'이 항목을 삭제할까요?',body:`<b>${esc(m.bank)} ${esc(m.branch)}</b> ${esc(m.product)}\n회차 기록과 재원 연결이 함께 사라지며, 되돌릴 수 없습니다.`,ok:'삭제',danger:true},()=>{DATA=DATA.filter(x=>x.id!==m.id);DATA.forEach(x=>x.funds=x.funds.filter(f=>f.from!==m.id));S.view='list';toast('삭제했습니다.');go()});
