@@ -114,7 +114,7 @@ td input{padding:2px 5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loadingMsg{font-weight:800}#loadingSub{margin-top:6px;color:var(--sub);font-size:.82rem;min-height:1.2em}
 </style></head><body><div class="app"><aside class="side"><div><h1>예적금 관리</h1><div class="sub" id="asof"></div></div>
-<nav class="nav" id="tabs"><button class="tab on" data-t="dash">📅 대시보드</button><button class="tab" data-t="list">📋 목록</button><button class="tab" data-t="flow">💰 월별 자금 흐름</button><button class="tab" data-t="memo">📝 메모</button><button class="tab" data-t="check">✔ 점검</button></nav>
+<nav class="nav" id="tabs"><button class="tab on" data-t="dash">📅 대시보드</button><button class="tab" data-t="list">📋 목록</button><button class="tab" data-t="flow">💰 월별 자금 흐름</button><button class="tab" data-t="alloc">🔀 재원 배분</button><button class="tab" data-t="memo">📝 메모</button><button class="tab" data-t="check">✔ 점검</button></nav>
 <details class="more" id="connBox"><summary>🔗 연결 설정</summary><div class="cset"><label>웹앱 주소 (Apps Script 배포 URL)</label><input id="cUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><label>비밀키</label><input id="cKey" type="password" placeholder="설정한 비밀키" autocomplete="off"><label>구글 클라이언트 ID (선택)</label><input id="cCid" placeholder="…apps.googleusercontent.com" autocomplete="off"><div id="gBtn"></div><div class="side-actions"><button class="btn" id="cSave">연결 저장</button><button class="btn" id="cOff">연결 해제</button></div><div class="note" id="cNote"></div></div></details>
 
 <div class="theme" id="theme"><button data-th="auto" title="기기(윈도우) 설정을 따라갑니다">자동</button><button data-th="light">☀ 라이트</button><button data-th="dark">🌙 다크</button></div>
@@ -409,13 +409,25 @@ function warns(){const w=[];DATA.filter(m=>status(m)==='진행').forEach(m=>{con
   if(fRanged(f)&&!f.done&&f.date&&f.date<todayS)w.push({id:m.id,lv:'bad',t:`만기금 납입 예정일(${f.date})이 지났습니다. 실제로 냈으면 재원 탭에서 "납입 확인"을 눌러 주세요. (${f.n1}~${f.n2}회)`,name:nm});
   fIns(m,f).forEach(i=>{if(seen[i.n])w.push({id:m.id,lv:'bad',t:`${i.n}회차가 재원 연결 두 곳에 겹쳐 있습니다.`,name:nm});seen[i.n]=1})})});
  return w}
+function alloc(){const all=S.afilter==='전체';
+ const rows=DATA.filter(m=>all||status(m)==='진행'||outsOf(m).some(u=>!u.f.done)).filter(m=>all?true:true).sort((a,b)=>a.end.localeCompare(b.end));
+ let T={M:0,plan:0,done:0};const body=rows.map(m=>{const o=outsOf(m),M=mat(m),pl=o.filter(u=>!u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),dn=o.filter(u=>u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),left=M-pl-dn;
+  if(status(m)==='진행'){T.M+=M;T.plan+=pl;T.done+=dn}
+  const p=M>0?Math.min(100,(pl+dn)/M*100):0;
+  return `<tr><td class="l">${m.end}${dwHtml(m.end)}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:' <span class="pill">완료</span>'}</td><td class="l"><span class="nlink" data-a="goto" data-id="${m.id}" data-tab="fund">${esc(m.branch)}</span><div class="sub">${esc(m.product||'')} · ${m.kind} ${termN(m)}개월</div></td><td>${won(M)}</td><td>${dn?won(dn):'-'}</td><td>${pl?won(pl):'-'}</td><td class="${left<0?'neg':''}"><b>${won(left)}</b><span class="prog" title="배분율 ${Math.round(p)}%" style="display:block;margin:3px 0 0 auto"><i style="width:${p}%"></i></span></td>
+  <td class="l" style="white-space:normal;min-width:280px">${o.length?o.map(u=>`<div style="font-size:12px;line-height:1.6">→ <span class="nlink" data-a="goto" data-id="${u.x.id}" data-tab="inst">${esc(u.x.branch)}</span>${fRanged(u.f)?` ${u.f.n1}~${u.f.n2}회`:''}${u.f.date?` · ${u.f.date}`:''} · ${won(fAmt(u.x,u.f))} ${u.f.done?'<span class="pill ok">완료</span>':(u.f.date&&u.f.date<todayS?'<span class="pill bad">확인 필요</span>':'<span class="pill">예정</span>')}${fBad(u.x,u.f)?' <span class="pill bad">날짜 오류</span>':''}</div>`).join(''):'<span class="sub">배분 없음</span>'}</td></tr>`}).join('');
+ $('view').innerHTML=`<div class="filters">${['진행','전체'].map(f=>`<button class="mt ${f===(S.afilter||'진행')?'on':''}" data-a="afilter" data-k="${f}" style="padding:5px 14px;font-size:13px">${f==='진행'?'진행 중':'전체(완료 포함)'}</button>`).join('')}<span class="sub">${rows.length}건</span></div>
+ <div class="grid3" style="margin-bottom:12px"><div class="box"><div class="sub">진행 중 만기금 합계</div><b style="font-size:20px">${won(T.M)}원</b></div><div class="box"><div class="sub">배분 · 납입 완료 / 예정</div><b style="font-size:20px">${won(T.done)}</b> <span class="sub">/ ${won(T.plan)}원</span></div><div class="box"><div class="sub">아직 배분 안 한 만기금</div><b style="font-size:20px" class="${T.M-T.plan-T.done<0?'neg':''}">${won(T.M-T.plan-T.done)}원</b></div></div>
+ <div class="card pscroll hp"><table><thead><tr><th class="l">만기</th><th class="l">출처 (만기되는 적금·예금)</th><th>만기금액</th><th>납입 완료</th><th>배분 예정</th><th>남은 만기금</th><th class="l">배분 내역</th></tr></thead><tbody>${body||'<tr><td colspan="7" class="sub" style="padding:20px">표시할 항목이 없습니다.</td></tr>'}</tbody></table></div>
+ <div class="note">배분 추가·수정은 출처 이름을 눌러 그 적금의 재원 탭에서 합니다. "확인 필요"는 납입일이 지났는데 납입 확인을 하지 않은 배분입니다.</div>`}
 function check(){const w=warns();$('view').innerHTML=`<div class="sub" style="margin-bottom:8px">항목을 누르면 상세로 이동합니다. (${w.length}건)</div><div class="card">${w.map(x=>`<div class="w" data-id="${x.id}"><span class="pill ${x.lv}">${x.lv==='bad'?'확인':'참고'}</span><div style="flex:1"><b>${esc(x.name)}</b><div class="sub">${esc(x.t)}</div></div>${x.k?`<button class="btn ackb" data-a="ack" data-id="${x.id}" data-k="${x.k}">확인 완료</button>`:''}</div>`).join('')||'<div style="padding:20px" class="sub">점검할 내용이 없습니다.</div>'}</div>`}
 function updTabs(){const n=warns().length;document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('on',b.dataset.t===S.view||((S.view==='detail'||S.view==='new')&&b.dataset.t===(S.from||'list')));if(b.dataset.t==='check')b.textContent='✔ 점검 ('+n+')'})}
 function phead(){const v=S.view,w=new Date(todayS+'T00:00:00').getDay(),m=get(S.sel);
  const H={dash:['📅','대시보드',`오늘은 ${todayS} (${DOW[w]}) · 납입 일정과 만기를 달력으로 한눈에 확인합니다.`],
   list:['📋','목록',`전체 ${DATA.length}건 · 진행 중과 완료된 적금·예금을 보고, 행을 눌러 수정합니다.`],
   flow:['💰','월별 자금 흐름','앞으로의 납입과 만기금이 달마다 어떻게 오가는지, 현금이 얼마나 필요한지 보여줍니다.'],
-  memo:['📝','메모','적금과 관련해 남겨 둘 내용을 간단히 적어 저장합니다. 특정 적금과 연결할 수도 있습니다.'],
+  alloc:['🔀','재원 배분 현황','만기되는 적금·예금의 만기금을 어느 적금 몇 회차에 배분했는지 한눈에 봅니다. 이름을 누르면 그 적금의 재원 탭으로 이동합니다.'],
+       memo:['📝','메모','적금과 관련해 남겨 둘 내용을 간단히 적어 저장합니다. 특정 적금과 연결할 수도 있습니다.'],
        check:['✔','점검','엑셀 정리와 입력 실수를 잡기 위한 확인 목록입니다.'],
   new:['➕','새 항목 등록','적금 또는 예금을 새로 등록합니다. 값을 넣으면 만기금액이 바로 계산됩니다.'],
   detail:['✏️',m?(m.bank+' '+m.branch).trim():'상세',m?`${m.kind} · ${m.product||'상품 미입력'} · 고치면 바로 자동 저장되고, 오른쪽 위에 저장 상태가 표시됩니다.`:'']}[v]||['','',''];
@@ -424,7 +436,7 @@ function nm(m){return (m.bank+' '+m.branch+' '+(m.product||'')).trim()}
 function memo(){const opts='<option value="">(연결 안 함)</option>'+DATA.map(m=>`<option value="${m.id}" ${String(ndraft.link)===String(m.id)?'selected':''}>${esc(nm(m))} · ${m.end}</option>`).join('');
  const list=NOTES.slice().sort((a,b)=>b.id-a.id).map(n=>{const m=n.link?get(+n.link):null;return `<div class="ncard"><div class="nh"><span>${esc(n.date)}</span>${m?`<span class="nlink" data-a="goto" data-id="${m.id}">${esc(nm(m))}</span>`:''}<span class="sp"></span><button class="ndel" data-a="noteDel" data-nid="${n.id}">삭제</button></div><textarea data-nid="${n.id}" placeholder="메모 내용">${esc(n.text)}</textarea></div>`}).join('');
  $('view').innerHTML=`<div class="card" style="margin-bottom:12px"><div class="nform"><textarea id="ntext" placeholder="적금 관련 내용을 간단히 적어 두세요. 예) 11월 만기금은 신규 12개월 적금에 쓰기">${esc(ndraft.text)}</textarea><div class="nr"><select id="nlink">${opts}</select><button class="btn" data-a="noteAdd" style="margin-left:auto">메모 저장</button></div></div></div><div class="card pscroll hp">${list||'<div style="padding:20px" class="sub">저장된 메모가 없습니다.</div>'}</div><div class="note">메모는 최신 순으로 보입니다. 내용을 고치면 바로 저장되고, 적금과 연결해 두면 이름을 눌러 상세로 갈 수 있습니다.</div>`}
-function go(){({dash,list,detail,flow,check,memo,new:newForm})[S.view]();fscrollTo();phead();kpis();updTabs();persist()}
+function go(){({dash,list,detail,flow,check,memo,alloc,new:newForm})[S.view]();fscrollTo();phead();kpis();updTabs();persist()}
 
 /* ---------- 이벤트 ---------- */
 function regen(m,after){const dirty=m.inst&&m.inst.some(i=>i.paid||i.act!==i.plan);
@@ -479,6 +491,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(a==='calPrev'||a==='calNext'||a==='calToday'){const c=S.cal;if(a==='calToday'){S.cal={y:TODAY.getFullYear(),m:TODAY.getMonth()};S.day=todayS}else{const d=new Date(c.y,c.m+(a==='calNext'?1:-1),1);S.cal={y:d.getFullYear(),m:d.getMonth()};S.day=''}return go()}
  if(a==='noteAdd'){const tx=($('ntext').value||'').trim();if(!tx)return toast('메모 내용을 입력해 주세요.',true);NOTES.push({id:Math.max(0,...NOTES.map(n=>n.id))+1,date:todayS,text:tx,link:$('nlink').value||''});ndraft={text:'',link:''};persistNotes();toast('메모를 저장했습니다.');return go()}
  if(a==='noteDel'){const id=+el.dataset.nid;return ask({title:'이 메모를 삭제할까요?',body:esc((NOTES.find(n=>n.id===id)||{text:''}).text.slice(0,80)),ok:'삭제',danger:true},()=>{NOTES=NOTES.filter(n=>n.id!==id);persistNotes();go()})}
+ if(a==='afilter'){S.afilter=el.dataset.k;return go()}
  if(a==='addOut'){S.outDraft=true;S.ff=null;return keep(detail)}
  if(a==='cancelOut'){S.outDraft=false;return keep(detail)}
  if(a==='pickN'){const u=selOut(m);if(!u||u.f.done)return;const {x,f}=u,n=+el.dataset.n;fUnapply(x,f);if(!S.pickEnd||f.n1==null){f.n1=f.n2=n;S.pickEnd=true}else{if(n<+f.n1){f.n2=f.n1;f.n1=n}else f.n2=n;S.pickEnd=false}fApply(x,f);return keep(detail)}
