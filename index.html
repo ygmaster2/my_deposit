@@ -322,7 +322,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
 
  <div class="box sec" data-sec="fund"><h3>재원 (만기금 연결)</h3>
  <div class="sub" style="margin-bottom:8px">이 ${m.kind}의 납입금을 어느 만기금에서 쓰는지 지정합니다.</div>
- ${m.funds.map((f,k)=>`<div class="fund"><select data-fk="${k}" data-ff="from"><option value="">선택…</option>${sources.map(s=>`<option value="${s.id}" ${s.id===f.from?'selected':''}>${esc(s.branch)} ${esc(s.product)} (${s.end}) 만기 ${man(mat(s))}</option>`).join('')}</select><input data-fk="${k}" data-ff="amt" data-t="money" value="${f.amt?won(f.amt):''}" placeholder="금액"><button class="btn sm" data-a="delFund" data-k="${k}">삭제</button></div>`).join('')}
+ ${m.funds.map((f,k)=>`<div class="fund"><select data-fk="${k}" data-ff="from"><option value="">선택…</option>${sources.filter(s=>status(s)==='진행'||s.id===f.from).map(s=>`<option value="${s.id}" ${s.id===f.from?'selected':''}>${esc(s.branch)} ${esc(s.product)} · ${s.kind} ${termN(s)}개월 · ${s.end} 만기 · ${man(mat(s))}</option>`).join('')}</select><input data-fk="${k}" data-ff="amt" data-t="money" value="${f.amt?won(f.amt):''}" placeholder="금액"><button class="btn sm" data-a="delFund" data-k="${k}">삭제</button></div>`).join('')}
  <button class="btn sm" data-a="addFund">+ 재원 추가</button>
  ${status(m)==='진행'?`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><div class="rows2"><span>이 항목의 만기금액</span><b class="v">${won(M)}원</b><span>다른 항목에 배분한 금액</span><span class="v">${won(alloc)}원</span><span>아직 배분 안 한 잔액</span><b class="v ${M-alloc<0?'neg':''}">${won(M-alloc)}원</b></div>
  ${used.map(u=>`<div class="note">→ ${esc(u.to.branch)} ${esc(u.to.product)} : ${won(u.amt)}원</div>`).join('')}
