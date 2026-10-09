@@ -47,7 +47,7 @@ td input{padding:2px 5px}
 .perk.auto{grid-template-columns:auto 1fr 64px auto}
 .fund{display:grid;grid-template-columns:1fr 110px auto;gap:6px;margin-bottom:6px}
 .bundle{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bundle div{font-size:12px;color:var(--sub)}.bundle input{width:150px}
-.w{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}.w:hover{background:var(--acc2)}
+.ackb{flex:none;font-size:12px;padding:4px 10px}.w{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}.w:hover{background:var(--acc2)}
 
 .cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
 .cal .dow{background:var(--acc2);text-align:center;font-size:12px;padding:5px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -198,6 +198,7 @@ function persist(){clearTimeout(pt);pt=setTimeout(async()=>{const cur=new Map(DA
 const get=id=>DATA.find(m=>m.id===id);
 const status=m=>m.end<=todayS?'완료':'진행';
 const paidCnt=m=>m.inst?m.inst.filter(i=>i.paid).length:0;
+const paidAmt=m=>m.kind==='예금'?(+m.amount||0):paidCnt(m)*(+m.amount||0);
 function perkMet(m,p){return p.mode==='auto'?(m.autoCount||0)>=Math.ceil(termN(m)*p.ratio-1e-9):!!p.checked}
 const appliedRate=m=>Math.round((m.baseRate+m.perks.filter(p=>perkMet(m,p)).reduce((s,p)=>s+(+p.add||0),0))*1000)/1000;
 const maxRate=m=>Math.round((m.baseRate+m.perks.reduce((s,p)=>s+(+p.add||0),0))*1000)/1000;
@@ -211,15 +212,15 @@ const allocOf=id=>DATA.reduce((s,x)=>s+x.funds.filter(f=>f.from===id).reduce((a,
 const S={dtab:'info',open:{},openDef:{},view:'dash',cal:{y:TODAY.getFullYear(),m:TODAY.getMonth()},day:todayS,filter:'진행',sel:null,rule:'',ruleDates:[]};
 function kpis(){const act=DATA.filter(m=>status(m)==='진행'&&m.kind==='적금');
  let lateN=0,lateS=0;DATA.filter(m=>status(m)==='진행'&&m.inst).forEach(m=>m.inst.forEach(i=>{if(!i.paid&&i.act&&i.act<todayS){lateN++;lateS+=m.amount}}));
- const mon=act.reduce((s,m)=>s+m.amount,0),dep=DATA.filter(m=>status(m)==='진행'&&m.kind==='예금').reduce((s,m)=>s+m.amount,0);
+ const mon=act.reduce((s,m)=>s+m.amount,0),dep=DATA.filter(m=>status(m)==='진행'&&m.kind==='예금').reduce((s,m)=>s+m.amount,0),sav=act.reduce((s,m)=>s+paidAmt(m),0);
  const next=DATA.filter(m=>status(m)==='진행').sort((a,b)=>a.end.localeCompare(b.end))[0];
  $('asof').textContent='기준일 '+todayS+' · 전체 '+DATA.length+'건';
- $('kpis').innerHTML=[['진행 중 적금',act.length+'건'],['진행 중 예금',won(dep/10000)+'만원'],['월 기본 납입 합계',won(mon/10000)+'만원'],['지연 미납',lateN+'회 · '+won(lateS/10000)+'만원'],['가장 가까운 만기',next?next.end+' · '+next.branch:'-']].map(x=>`<div class="sr"><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join('')}
+ $('kpis').innerHTML=[['진행 중 적금',act.length+'건'],['적금 납입 누계',won(sav/10000)+'만원'],['진행 중 예금',won(dep/10000)+'만원'],['총 납입금 (적금+예금)',won((sav+dep)/10000)+'만원'],['월 기본 납입 합계',won(mon/10000)+'만원'],['지연 미납',lateN+'회 · '+won(lateS/10000)+'만원'],['가장 가까운 만기',next?next.end+' · '+next.branch:'-']].map(x=>`<div class="sr"><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join('')}
 const dday=s=>{const d=diff(s,todayS);return d>=0?'D-'+d:'D+'+(-d)};
 function list(){const rows=DATA.filter(m=>S.filter==='전체'||status(m)===S.filter).sort((a,b)=>S.filter==='완료'?b.end.localeCompare(a.end):a.end.localeCompare(b.end));
- $('view').innerHTML=`<div class="filters">${['진행','완료','전체'].map(f=>`<button class="chip ${f===S.filter?'on':''}" data-f="${f}">${f}</button>`).join('')}<span class="sub">${rows.length}건 · 행을 누르면 상세(수정)</span><span style="flex:1"></span><button class="btn primary" data-a="newItem">+ 등록</button></div>
- <div class="card pscroll"><table><thead><tr><th class="l">만기</th><th class="l">구분</th><th class="l">기관 / 지점</th><th class="l">상품</th><th>월 납입/가입액</th><th>진행</th><th>적용금리</th><th>만기금액</th><th class="l">만기 후 메모</th></tr></thead><tbody>`+
- rows.map(m=>{const p=m.inst?paidCnt(m)/m.inst.length:null;return `<tr class="row" data-id="${m.id}"><td class="l">${m.end}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:''}</td><td class="l">${m.kind}</td><td class="l">${esc(m.bank)} / ${esc(m.branch)}</td><td class="l">${esc(m.product)}</td><td>${won(m.amount)}</td><td>${p==null?'<span class="pill">예치</span>':paidCnt(m)+'/'+m.inst.length+`<span class="prog"><i style="width:${p*100}%"></i></span>`}</td><td>${appliedRate(m)}%</td><td>${won(mat(m))}${m.actualMaturity==null?' <span class="pill">계산</span>':''}</td><td class="l">${esc(m.after)}</td></tr>`}).join('')+`</tbody></table></div>`}
+ $('view').innerHTML=`<div class="filters">${['진행','완료','전체'].map(f=>`<button class="chip ${f===S.filter?'on':''}" data-f="${f}">${f}</button>`).join('')}<span class="sub">${rows.length}건 · 현재 납입금 합계 <b style="color:var(--ink)">${won(rows.reduce((s,m)=>s+paidAmt(m),0))}원</b> (적금 ${won(rows.filter(m=>m.kind==='적금').reduce((s,m)=>s+paidAmt(m),0))} + 예금 ${won(rows.filter(m=>m.kind==='예금').reduce((s,m)=>s+paidAmt(m),0))}) · 만기금액 합계 ${won(rows.reduce((s,m)=>s+mat(m),0))}원</span><span style="flex:1"></span><button class="btn primary" data-a="newItem">+ 등록</button></div>
+ <div class="card pscroll"><table><thead><tr><th class="l">만기</th><th class="l">구분</th><th class="l">기관 / 지점</th><th class="l">상품</th><th>월 납입/가입액</th><th>진행</th><th>현재 납입금</th><th>적용금리</th><th>만기금액</th><th class="l">만기 후 메모</th></tr></thead><tbody>`+
+ rows.map(m=>{const p=m.inst?paidCnt(m)/m.inst.length:null;return `<tr class="row" data-id="${m.id}"><td class="l">${m.end}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:''}</td><td class="l">${m.kind}</td><td class="l">${esc(m.bank)} / ${esc(m.branch)}</td><td class="l">${esc(m.product)}</td><td>${won(m.amount)}</td><td>${p==null?'<span class="pill">예치</span>':paidCnt(m)+'/'+m.inst.length+`<span class="prog"><i style="width:${p*100}%"></i></span>`}</td><td>${won(paidAmt(m))}</td><td>${appliedRate(m)}%</td><td>${won(mat(m))}${m.actualMaturity==null?' <span class="pill">계산</span>':''}</td><td class="l">${esc(m.after)}</td></tr>`}).join('')+`</tbody></table></div>`}
 
 const pad=n=>String(n).padStart(2,'0'),ymdL=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function events(){const ev={};const add=(d,e)=>{if(d)(ev[d]=ev[d]||[]).push(e)};
@@ -306,7 +307,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
  <div class="note">우대금리는 만기 때 확정되므로 중간에는 예상값입니다.</div></div>
 
  <div class="box sec" data-sec="info"><h3>이자와 만기금액</h3><table style="white-space:normal"><thead><tr><th class="l"></th><th>계산값</th><th>실제(은행 확인)</th></tr></thead><tbody>
- <tr><td class="l">만기원금</td><td>${won(c.principal)}</td><td></td></tr><tr><td class="l">세전 이자</td><td>${won(c.gross)}</td><td></td></tr><tr><td class="l">세금</td><td>${won(c.tax)}</td><td></td></tr><tr><td class="l">세후 이자</td><td>${won(c.net)}</td><td></td></tr>
+ <tr><td class="l"><b>현재 납입금</b></td><td><b>${won(paidAmt(m))}</b>${m.inst?` <span class="sub">(${paidCnt(m)}/${m.inst.length}회)</span>`:''}</td><td class="sub">${m.inst?'남은 납입 '+won(c.principal-paidAmt(m))+'원':'예치'}</td></tr><tr><td class="l">만기원금</td><td>${won(c.principal)}</td><td></td></tr><tr><td class="l">세전 이자</td><td>${won(c.gross)}</td><td></td></tr><tr><td class="l">세금</td><td>${won(c.tax)}</td><td></td></tr><tr><td class="l">세후 이자</td><td>${won(c.net)}</td><td></td></tr>
  <tr><td class="l"><b>만기금액</b></td><td><b>${won(c.total)}</b></td><td><input data-f="actualMaturity" data-t="money" value="${m.actualMaturity!=null?won(m.actualMaturity):''}" placeholder="비우면 계산값 사용"></td></tr></tbody></table>
  <div class="note">${dm==null?'실제 만기금액을 입력하면 그 값이 우선 사용됩니다.':`계산값과 실제값의 차이: <b class="${Math.abs(dm)>3000?'neg':''}">${sg(Math.round(dm))}원</b>`}${m.kind==='적금'?' · 단리 월적금 기준 계산이며 선납·이연 일수는 반영하지 않습니다.':''}</div></div>
 
@@ -321,6 +322,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
  ${m.inst?`<div class="box"><h3>선납이연 규칙 입력</h3><div class="sub">회차를 묶음으로 나눠 숫자로 적습니다. 예) 12회 적금 <b>1-6-5</b>, <b>1-11</b> / 36회 적금 <b>1-12-12-11</b> (합계 = 총 ${m.inst.length}회)</div>
   <div style="display:flex;gap:8px;margin-top:8px"><input id="rule" placeholder="1-6-5" value="${esc(S.rule)}" style="max-width:220px"><button class="btn sm" data-a="applyRule">날짜 적용</button><button class="btn sm" data-a="resetRule">정상 납입으로 되돌리기</button></div>
   <div id="ruleInfo"></div><div class="note">규칙으로 안 되는 경우는 아래 표의 실제 납입일을 직접 고치세요. 규칙 적용 뒤 일부 회차만 고쳐도 됩니다.</div></div>
+ <div class="sub" style="margin:4px 2px 8px">납입 <b style="color:var(--ink)">${paidCnt(m)}/${m.inst.length}회</b> · 현재 납입금 <b style="color:var(--ink)">${won(paidAmt(m))}원</b> · 남은 납입 ${won(m.inst.filter(i=>!i.paid).length*m.amount)}원</div>
  <div class="card tscroll"><table><thead><tr><th class="l">회차</th><th>납입 예정일</th><th>실제(예정) 납입일</th><th>납입</th><th class="l">상태</th><th>선납이연일</th><th>누적 선납이연일</th></tr></thead><tbody>${rowsH}</tbody></table></div>
  <div class="note">선납이연일은 이연이면 +, 선납이면 -이며, 누적 선납이연일은 이 값을 회차 순서대로 더한 값입니다. 날짜가 지났는데 납입 체크가 없으면 지연으로 표시됩니다.</div>`:'<div class="box sub">예금은 회차 없이 예치금과 만기금액만 관리합니다.</div>'}
  </div></div>`;
@@ -349,17 +351,17 @@ function flow(){const months={},mk=s=>s.slice(0,7),cur=mk(todayS);
  rows.map(r=>`<tr><td class="l">${r.k}</td><td>${won(r.out)}</td><td class="${r.late?'neg':''}">${r.late?won(r.late):'-'}</td><td class="${r.inn?'pos':''}">${r.inn?won(r.inn):'-'}</td><td>${r.use?won(r.use):'-'}</td><td class="${r.cash?'neg':''}">${r.cash?won(r.cash):'-'}</td><td>${won(r.pool)}</td><td class="l"><span class="bar" style="width:${(r.out+r.late)/mx*120}px"></span> <span class="bar in" style="width:${r.inn/mx*120}px"></span></td><td class="l sub">${r.items.join(', ')}</td></tr>`).join('')+`</tbody></table></div>
  <div class="note">파란 막대 = 납입, 초록 막대 = 만기금 유입. 지연 미납은 현재 달에 모아 현금 투입에 포함했습니다. 상세 화면에서 만기금 재원 포함 여부와 배분을 바꾸면 다시 계산됩니다.</div>`}
 
-function warns(){const w=[];DATA.filter(m=>status(m)==='진행').forEach(m=>{const add=(lv,t)=>w.push({id:m.id,lv,t,name:m.branch+' '+m.product});
+function warns(){const w=[];DATA.filter(m=>status(m)==='진행').forEach(m=>{const add=(lv,t,k)=>w.push({id:m.id,lv,t,k,name:m.branch+' '+m.product});
  if(m.inst){const late=m.inst.filter(i=>!i.paid&&i.act&&i.act<todayS);if(late.length)add('bad',`지연 미납 ${late.length}회 (${late[0].n}회차부터) — 날짜가 지났는데 납입 체크가 없습니다.`);
-  if(m.generated)add('warn','시트 없이 회차를 자동 생성한 항목입니다. 납입 기록을 확인하세요.');
-  const pm=/(\d+)\/(\d+)/.exec(m.excelProg||'');if(pm&&(+pm[1]!==paidCnt(m)||+pm[2]!==m.inst.length))add('warn',`엑셀 진행 표시(${m.excelProg})와 납입 체크 ${paidCnt(m)}회/총 ${m.inst.length}회가 다릅니다.`);
+  if(m.generated)add('warn','엑셀에 회차 시트가 없어 회차를 자동으로 만든 항목입니다. 실제 납입을 체크한 뒤 "확인 완료"를 누르세요.','gen');
+  const pm=/(\d+)\/(\d+)/.exec(m.excelProg||'');if(pm&&(+pm[1]!==paidCnt(m)||+pm[2]!==m.inst.length))add('warn',`엑셀 진행 표시(${m.excelProg})와 납입 체크 ${paidCnt(m)}회/총 ${m.inst.length}회가 다릅니다. 앱의 납입 체크가 맞으면 "확인 완료"를 누르세요.`,'prog');
   if(m.inst.length!==termN(m))add('bad',`기간 ${termN(m)}개월과 회차 수 ${m.inst.length}가 다릅니다.`);
   m.perks.filter(p=>p.mode==='auto').forEach(p=>{const need=Math.ceil(termN(m)*p.ratio-1e-9),rem=m.inst.filter(i=>!i.paid).length;if((m.autoCount||0)+rem<need)add('bad',`우대 조건(${p.name}) 충족이 불가능합니다.`);else if((m.autoCount||0)<need)add('warn',`우대 조건(${p.name}) 아직 ${need-(m.autoCount||0)}회 더 필요합니다.`)})}
- if(m.actualMaturity!=null){const d=m.actualMaturity-calc(m).total;if(Math.abs(d)>3000)add('warn',`계산 만기금액과 실제 값이 ${sg(Math.round(d))}원 차이납니다. (선납·이연, 우대금리, 이자 방식 확인)`)}
+ if(m.actualMaturity!=null){const d=m.actualMaturity-calc(m).total,k='mat:'+Math.round(d);if(Math.abs(d)>3000&&!(m.ack||[]).includes(k))add('warn',`계산 만기금액과 실제 값이 ${sg(Math.round(d))}원 차이납니다. (선납·이연, 우대금리, 이자 방식 확인) 실제 값이 맞으면 "확인 완료"를 누르세요.`,k)}
  const al=allocOf(m.id),M=mat(m);if(al>M)add('bad',`배분한 재원(${won(al)}원)이 만기금액(${won(M)}원)보다 큽니다.`)});
  DATA.forEach(m=>m.funds.forEach(f=>{if(!f.from||!f.amt)w.push({id:m.id,lv:'warn',t:'재원 연결이 비어 있습니다.',name:m.branch+' '+m.product})}));
  return w}
-function check(){const w=warns();$('view').innerHTML=`<div class="sub" style="margin-bottom:8px">항목을 누르면 상세로 이동합니다. (${w.length}건)</div><div class="card">${w.map(x=>`<div class="w" data-id="${x.id}"><span class="pill ${x.lv}">${x.lv==='bad'?'확인':'참고'}</span><div><b>${esc(x.name)}</b><div class="sub">${esc(x.t)}</div></div></div>`).join('')||'<div style="padding:20px" class="sub">점검할 내용이 없습니다.</div>'}</div>`}
+function check(){const w=warns();$('view').innerHTML=`<div class="sub" style="margin-bottom:8px">항목을 누르면 상세로 이동합니다. (${w.length}건)</div><div class="card">${w.map(x=>`<div class="w" data-id="${x.id}"><span class="pill ${x.lv}">${x.lv==='bad'?'확인':'참고'}</span><div style="flex:1"><b>${esc(x.name)}</b><div class="sub">${esc(x.t)}</div></div>${x.k?`<button class="btn ackb" data-a="ack" data-id="${x.id}" data-k="${x.k}">확인 완료</button>`:''}</div>`).join('')||'<div style="padding:20px" class="sub">점검할 내용이 없습니다.</div>'}</div>`}
 function updTabs(){const n=warns().length;document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('on',b.dataset.t===S.view||((S.view==='detail'||S.view==='new')&&b.dataset.t===(S.from||'list')));if(b.dataset.t==='check')b.textContent='✔ 점검 ('+n+')'})}
 function phead(){const v=S.view,w=new Date(todayS+'T00:00:00').getDay(),m=get(S.sel);
  const H={dash:['📅','대시보드',`오늘은 ${todayS} (${DOW[w]}) · 납입 일정과 만기를 달력으로 한눈에 확인합니다.`],
@@ -404,6 +406,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(el.classList.contains('day')){S.day=el.dataset.d;const o=new Date(S.day);if(o.getMonth()!==S.cal.m){S.cal={y:o.getFullYear(),m:o.getMonth()}}return keep(dash)}
  if(el.matches('tr.row,.w')){S.from=S.view==='detail'?S.from:S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.dtab='info';window.scrollTo(0,0);return go()}
  const a=el.dataset.a,m=get(S.sel);if(!a)return;
+ if(a==='ack'){const x=get(+el.dataset.id);if(!x)return;if(el.dataset.k==='gen')x.generated=false;if(el.dataset.k==='prog')x.excelProg=null;if(el.dataset.k.startsWith('mat:'))x.ack=[...(x.ack||[]).filter(s=>!s.startsWith('mat:')),el.dataset.k];toast('확인 완료로 표시했습니다.');return keep(check)}
  if(a==='newItem'){S.draft=mkDraft('적금');S.from='list';S.view='new';window.scrollTo(0,0);return go()}
  if(a==='create'){const d=S.draft;if(!d.branch.trim())return toast('지점(또는 이름)을 입력해 주세요.',true);if(!(d.amount>0))return toast('금액을 입력해 주세요.',true);d.id=NEXT++;d.end=addM(d.start,termN(d));d.inst=d.kind==='적금'?genInst(d):null;DATA.push(d);S.sel=d.id;S.view='detail';S.from='list';S.dtab='info';S.rule='';S.draft=null;toast(d.kind+'을 등록했습니다.');window.scrollTo(0,0);return go()}
  if(a==='dtab'){S.dtab=el.dataset.k;return keep(detail)}
