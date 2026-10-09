@@ -47,7 +47,7 @@ td input{padding:2px 5px}
 .perk.auto{grid-template-columns:auto 1fr 64px auto}
 .fund{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;margin-bottom:10px;padding:10px;border:1px solid var(--line);border-radius:8px}.fund .fr{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.fund .fr input[type=number]{width:62px}.fund .fr input[type=date]{width:150px}.fund .fa{display:flex;gap:6px;align-items:flex-start;justify-content:flex-end;flex-wrap:wrap}.fund.done{background:color-mix(in srgb,var(--ok) 7%,transparent)}
 .bundle{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bundle div{font-size:12px;color:var(--sub)}.bundle input{width:150px}
-.ackb{flex:none;font-size:12px;padding:4px 10px}.w{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}.w:hover{background:var(--acc2)}
+.tbadge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:18px;margin-left:4px}.ackb{flex:none;font-size:12px;padding:4px 10px}.w{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer}.w:hover{background:var(--acc2)}
 
 .cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
 .cal .dow{background:var(--acc2);text-align:center;font-size:12px;padding:5px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -223,8 +223,9 @@ function fUnapply(m,f){if(f.done||!f.date)return;fIns(m,f).forEach(i=>{if(!i.pai
 function fApply(m,f){f.amt=fAmt(m,f);if(f.done||!f.date)return;fIns(m,f).forEach(i=>{if(!i.paid)i.act=f.date})}
 const outsOf=m=>DATA.flatMap(x=>x.funds.filter(f=>f.from===m.id).map(f=>({x,f}))).sort((a,b)=>a.x.end.localeCompare(b.x.end)||a.x.id-b.x.id);
 const targetsOf=m=>DATA.filter(x=>x.id!==m.id&&status(x)==='진행'&&x.end>m.end&&(x.kind==='적금'||x.start>=m.end)).sort((a,b)=>a.end.localeCompare(b.end));
-const tLabel=t=>`${esc(t.branch)} ${esc(t.product)} · ${t.kind} ${termN(t)}개월 · ${t.end} 만기 · ${t.kind==='적금'?'월 '+man(t.amount):man(t.amount)}`;
+const tLabel=t=>`${esc(t.branch)} ${esc(t.product)} · ${t.kind} ${termN(t)}개월 · ${t.end} 만기 · ${t.kind==='적금'?'월 '+man(t.amount)+` · 납입 ${paidCnt(t)}/${t.inst.length}회 · 재원 미정 ${freeIns(t).length}회`:man(t.amount)}`;
 function selOut(m){const o=outsOf(m);if(S.outDraft)return null;return o.find(u=>u.f===S.ff)||o[o.length-1]||null}
+const freeIns=x=>x.inst?x.inst.filter(i=>!i.paid&&!srcOfInst(x,i.n)):[];
 const firstFree=x=>{const u=x.inst?x.inst.find(i=>!i.paid&&!srcOfInst(x,i.n)):null;return u?u.n:null};
 function outRow(m,u,k,tg,sel){const {x,f}=u,dis=f.done?'disabled':'',bad=fBad(x,f);
  return `<div class="fund ${f.done?'done':''} ${f===sel?'on':''}" data-uk="${k}"><div class="fr"><span class="sub">→ 넣을 적금</span><select data-uk="${k}" data-uf="to" ${dis}>${(tg.includes(x)?tg:tg.concat([x])).map(t=>`<option value="${t.id}" ${t===x?'selected':''}>${tLabel(t)}</option>`).join('')}</select></div>
@@ -414,14 +415,25 @@ function alloc(){const all=S.afilter==='전체';
  let T={M:0,plan:0,done:0};const body=rows.map(m=>{const o=outsOf(m),M=mat(m),pl=o.filter(u=>!u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),dn=o.filter(u=>u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),left=M-pl-dn;
   if(status(m)==='진행'){T.M+=M;T.plan+=pl;T.done+=dn}
   const p=M>0?Math.min(100,(pl+dn)/M*100):0;
-  return `<tr><td class="l">${m.end}${dwHtml(m.end)}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:' <span class="pill">완료</span>'}</td><td class="l"><span class="nlink" data-a="goto" data-id="${m.id}" data-tab="fund">${esc(m.branch)}</span><div class="sub">${esc(m.product||'')} · ${m.kind} ${termN(m)}개월</div></td><td>${won(M)}</td><td>${dn?won(dn):'-'}</td><td>${pl?won(pl):'-'}</td><td class="${left<0?'neg':''}"><b>${won(left)}</b><span class="prog" title="배분율 ${Math.round(p)}%" style="display:block;margin:3px 0 0 auto"><i style="width:${p}%"></i></span></td>
+  const inc=m.funds.reduce((a,f)=>a+fAmt(m,f),0),fr=freeIns(m);
+  return `<tr><td class="l">${m.end}${dwHtml(m.end)}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:' <span class="pill">완료</span>'}</td><td class="l"><span class="nlink" data-a="goto" data-id="${m.id}" data-tab="fund">${esc(m.branch)}</span><div class="sub">${esc(m.product||'')} · ${m.kind} ${termN(m)}개월</div></td>
+  <td>${m.inst?`${paidCnt(m)}/${m.inst.length}회<div class="sub">${won(paidAmt(m))}원</div><span class="prog" style="display:block;margin:2px 0 0 auto"><i style="width:${paidCnt(m)/m.inst.length*100}%"></i></span>`:'<span class="pill">예치</span><div class="sub">'+won(m.amount)+'원</div>'}</td>
+  <td>${m.inst?(fr.length?`<b>${fr.length}회</b><div class="sub">${won(fr.length*m.amount)}원</div>`:'<span class="pill ok">모두 정함</span>'):'-'}${inc?`<div class="sub" style="color:var(--acc)">만기금 ${won(inc)}원 받음/예정</div>`:''}</td>
+  <td>${won(M)}</td><td>${dn?won(dn):'-'}<div class="sub">${pl?'예정 '+won(pl):''}</div></td><td class="${left<0?'neg':''}"><b>${won(left)}</b><span class="prog" title="배분율 ${Math.round(p)}%" style="display:block;margin:3px 0 0 auto"><i style="width:${p}%"></i></span></td>
   <td class="l" style="white-space:normal;min-width:280px">${o.length?o.map(u=>`<div style="font-size:12px;line-height:1.6">→ <span class="nlink" data-a="goto" data-id="${u.x.id}" data-tab="inst">${esc(u.x.branch)}</span>${fRanged(u.f)?` ${u.f.n1}~${u.f.n2}회`:''}${u.f.date?` · ${u.f.date}`:''} · ${won(fAmt(u.x,u.f))} ${u.f.done?'<span class="pill ok">완료</span>':(u.f.date&&u.f.date<todayS?'<span class="pill bad">확인 필요</span>':'<span class="pill">예정</span>')}${fBad(u.x,u.f)?' <span class="pill bad">날짜 오류</span>':''}</div>`).join(''):'<span class="sub">배분 없음</span>'}</td></tr>`}).join('');
  $('view').innerHTML=`<div class="filters">${['진행','전체'].map(f=>`<button class="mt ${f===(S.afilter||'진행')?'on':''}" data-a="afilter" data-k="${f}" style="padding:5px 14px;font-size:13px">${f==='진행'?'진행 중':'전체(완료 포함)'}</button>`).join('')}<span class="sub">${rows.length}건</span></div>
  <div class="grid3" style="margin-bottom:12px"><div class="box"><div class="sub">진행 중 만기금 합계</div><b style="font-size:20px">${won(T.M)}원</b></div><div class="box"><div class="sub">배분 · 납입 완료 / 예정</div><b style="font-size:20px">${won(T.done)}</b> <span class="sub">/ ${won(T.plan)}원</span></div><div class="box"><div class="sub">아직 배분 안 한 만기금</div><b style="font-size:20px" class="${T.M-T.plan-T.done<0?'neg':''}">${won(T.M-T.plan-T.done)}원</b></div></div>
- <div class="card pscroll hp"><table><thead><tr><th class="l">만기</th><th class="l">출처 (만기되는 적금·예금)</th><th>만기금액</th><th>납입 완료</th><th>배분 예정</th><th>남은 만기금</th><th class="l">배분 내역</th></tr></thead><tbody>${body||'<tr><td colspan="7" class="sub" style="padding:20px">표시할 항목이 없습니다.</td></tr>'}</tbody></table></div>
- <div class="note">배분 추가·수정은 출처 이름을 눌러 그 적금의 재원 탭에서 합니다. "확인 필요"는 납입일이 지났는데 납입 확인을 하지 않은 배분입니다.</div>`}
-function check(){const w=warns();$('view').innerHTML=`<div class="sub" style="margin-bottom:8px">항목을 누르면 상세로 이동합니다. (${w.length}건)</div><div class="card">${w.map(x=>`<div class="w" data-id="${x.id}"><span class="pill ${x.lv}">${x.lv==='bad'?'확인':'참고'}</span><div style="flex:1"><b>${esc(x.name)}</b><div class="sub">${esc(x.t)}</div></div>${x.k?`<button class="btn ackb" data-a="ack" data-id="${x.id}" data-k="${x.k}">확인 완료</button>`:''}</div>`).join('')||'<div style="padding:20px" class="sub">점검할 내용이 없습니다.</div>'}</div>`}
-function updTabs(){const n=warns().length;document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('on',b.dataset.t===S.view||((S.view==='detail'||S.view==='new')&&b.dataset.t===(S.from||'list')));if(b.dataset.t==='check')b.textContent='✔ 점검 ('+n+')'})}
+ <div class="card pscroll hp"><table><thead><tr><th class="l">만기</th><th class="l">적금·예금</th><th>납입 현황</th><th title="아직 안 냈고 만기금 배분도 안 정한 회차">남은 납입<br><span style="font-weight:400">(재원 미정)</span></th><th>만기금액</th><th>배분 완료<br><span style="font-weight:400">/ 예정</span></th><th>남은 만기금</th><th class="l">배분 내역</th></tr></thead><tbody>${body||'<tr><td colspan="9" class="sub" style="padding:20px">표시할 항목이 없습니다.</td></tr>'}</tbody></table></div>
+ <div class="note">"남은 납입(재원 미정)"은 아직 안 냈고 만기금 배분도 정하지 않은 회차라서, 만기금을 넣을 곳을 고를 때 참고하면 됩니다. 배분 추가·수정은 출처 이름을 눌러 그 적금의 재원 탭에서 합니다. "확인 필요"는 납입일이 지났는데 납입 확인을 하지 않은 배분입니다.</div>`}
+let SEEN=new Set();try{SEEN=new Set(JSON.parse(localStorage.getItem('yj-seen')||'[]'))}catch(e){}
+const wKey=x=>x.id+'|'+x.t;
+function markSeen(w){let ch=false;w.forEach(x=>{const k=wKey(x);if(!SEEN.has(k)){SEEN.add(k);ch=true}});if(ch)try{localStorage.setItem('yj-seen',JSON.stringify([...SEEN].slice(-500)))}catch(e){}}
+function check(){const w=warns(),nw=w.filter(x=>!SEEN.has(wKey(x))),hasXl=DATA.some(m=>m.excelProg||m.generated);
+ const ord=[...w].sort((a,b)=>(SEEN.has(wKey(a))?1:0)-(SEEN.has(wKey(b))?1:0));
+ $('view').innerHTML=`<div class="filters"><span class="sub">전체 ${w.length}건${nw.length?` · <b style="color:var(--acc)">새 항목 ${nw.length}건</b>`:''} · 이 화면을 보면 메뉴의 숫자는 사라지고, 항목은 여기에 계속 남습니다. 항목을 누르면 상세로 이동합니다.</span><span style="flex:1"></span>${hasXl?'<button class="btn" data-a="xlDone" title="엑셀 진행 표시·자동 생성 회차와 비교하는 점검을 모두 끕니다">엑셀 대조 끝내기</button>':''}</div>
+ <div class="card">${ord.map(x=>`<div class="w" data-id="${x.id}"><span class="pill ${x.lv}">${x.lv==='bad'?'확인':'참고'}</span><div style="flex:1"><b>${esc(x.name)}</b>${SEEN.has(wKey(x))?'':' <span class="pill" style="color:var(--acc);border-color:var(--acc)">새 항목</span>'}<div class="sub">${esc(x.t)}</div></div>${x.k?`<button class="btn ackb" data-a="ack" data-id="${x.id}" data-k="${x.k}">확인 완료</button>`:''}</div>`).join('')||'<div style="padding:20px" class="sub">점검할 내용이 없습니다.</div>'}</div>`;
+ markSeen(w)}
+function updTabs(){const n=warns().filter(x=>!SEEN.has(wKey(x))).length;document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('on',b.dataset.t===S.view||((S.view==='detail'||S.view==='new')&&b.dataset.t===(S.from||'list')));if(b.dataset.t==='check')b.innerHTML='✔ 점검'+(n?` <span class="tbadge">${n}</span>`:'')})}
 function phead(){const v=S.view,w=new Date(todayS+'T00:00:00').getDay(),m=get(S.sel);
  const H={dash:['📅','대시보드',`오늘은 ${todayS} (${DOW[w]}) · 납입 일정과 만기를 달력으로 한눈에 확인합니다.`],
   list:['📋','목록',`전체 ${DATA.length}건 · 진행 중과 완료된 적금·예금을 보고, 행을 눌러 수정합니다.`],
@@ -491,6 +503,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(a==='calPrev'||a==='calNext'||a==='calToday'){const c=S.cal;if(a==='calToday'){S.cal={y:TODAY.getFullYear(),m:TODAY.getMonth()};S.day=todayS}else{const d=new Date(c.y,c.m+(a==='calNext'?1:-1),1);S.cal={y:d.getFullYear(),m:d.getMonth()};S.day=''}return go()}
  if(a==='noteAdd'){const tx=($('ntext').value||'').trim();if(!tx)return toast('메모 내용을 입력해 주세요.',true);NOTES.push({id:Math.max(0,...NOTES.map(n=>n.id))+1,date:todayS,text:tx,link:$('nlink').value||''});ndraft={text:'',link:''};persistNotes();toast('메모를 저장했습니다.');return go()}
  if(a==='noteDel'){const id=+el.dataset.nid;return ask({title:'이 메모를 삭제할까요?',body:esc((NOTES.find(n=>n.id===id)||{text:''}).text.slice(0,80)),ok:'삭제',danger:true},()=>{NOTES=NOTES.filter(n=>n.id!==id);persistNotes();go()})}
+ if(a==='xlDone')return ask({title:'엑셀 대조를 끝낼까요?',body:'엑셀 진행 표시와 비교하는 점검, 회차를 자동 생성한 항목 점검을 모두 끕니다.\n앱의 납입 체크를 기준으로 쓰게 되며, 다른 점검(지연 미납, 재원 오류 등)은 그대로 남습니다.',ok:'엑셀 대조 끝내기'},()=>{DATA.forEach(x=>{x.excelProg=null;x.generated=false});toast('엑셀 대조 점검을 껐습니다.');keep(check)});
  if(a==='afilter'){S.afilter=el.dataset.k;return go()}
  if(a==='addOut'){S.outDraft=true;S.ff=null;return keep(detail)}
  if(a==='cancelOut'){S.outDraft=false;return keep(detail)}
