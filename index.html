@@ -345,7 +345,8 @@ function ruleInfo(m){const el=$('ruleInfo');if(!el)return;const p=parseRule(m);i
 function applyRule(m){const p=parseRule(m);if(!p)return toast('규칙을 1-6-5 형태로 적어 주세요.',true);const sum=p.reduce((a,b)=>a+b,0);if(sum!==m.inst.length)return toast('묶음 합계('+sum+')가 총 회차('+m.inst.length+')와 다릅니다.',true);
  const dates=[...document.querySelectorAll('[data-rd]')].map(e=>e.value);if(dates.some(d=>!d))return toast('모든 묶음의 납입일을 입력해 주세요.',true);
  ask({title:'납입일을 규칙대로 채울까요?',body:`<b>${esc(S.rule)}</b> 규칙으로 <b>미납 ${m.inst.filter(i=>!i.paid).length}개 회차</b>의 실제(예정) 납입일을 덮어씁니다.\n납입 완료된 회차는 날짜가 바뀌지 않습니다.`,ok:'날짜 적용'},()=>{let i=0;p.forEach((s,k)=>{for(let j=0;j<s;j++){const x=m.inst[i++];if(!x.paid)x.act=dates[k]}});toast('납입일을 채웠습니다.');keep(detail)})}
-function keep(fn){const y=window.scrollY;fn();window.scrollTo(0,y);phead();kpis();updTabs();persist()}
+const SCR='.tscroll,.pscroll,.daypanel,.mts';
+function keep(fn){const y=window.scrollY,sc=[...document.querySelectorAll(SCR)].map(e=>[e.scrollTop,e.scrollLeft]);fn();phead();kpis();updTabs();document.querySelectorAll(SCR).forEach((e,i)=>{if(sc[i]){e.scrollTop=sc[i][0];e.scrollLeft=sc[i][1]}});window.scrollTo(0,y);persist()}
 
 function flow(){const months={},mk=s=>s.slice(0,7),cur=mk(todayS);
  const ensure=k=>months[k]||(months[k]={out:0,late:0,inn:0,items:[]});
