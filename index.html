@@ -114,12 +114,12 @@ td input{padding:2px 5px}
 </style></head><body><div class="app"><aside class="side"><div><h1>예적금 관리</h1><div class="sub" id="asof"></div></div>
 <nav class="nav" id="tabs"><button class="tab on" data-t="dash">📅 대시보드</button><button class="tab" data-t="list">📋 목록</button><button class="tab" data-t="flow">💰 월별 자금 흐름</button><button class="tab" data-t="memo">📝 메모</button><button class="tab" data-t="check">✔ 점검</button></nav>
 <details class="more" id="connBox"><summary>🔗 연결 설정</summary><div class="cset"><label>웹앱 주소 (Apps Script 배포 URL)</label><input id="cUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><label>비밀키</label><input id="cKey" type="password" placeholder="설정한 비밀키" autocomplete="off"><label>구글 클라이언트 ID (선택)</label><input id="cCid" placeholder="…apps.googleusercontent.com" autocomplete="off"><div id="gBtn"></div><div class="side-actions"><button class="btn" id="cSave">연결 저장</button><button class="btn" id="cOff">연결 해제</button></div><div class="note" id="cNote"></div></div></details>
-<details class="more"><summary>백업</summary><div class="side-actions" style="margin-top:6px"><button class="btn" id="exp">백업 내려받기</button><button class="btn" id="imp">백업 불러오기</button><input type="file" id="file" accept=".json" hidden></div></details>
+
 <div class="theme" id="theme"><button data-th="auto" title="기기(윈도우) 설정을 따라갑니다">자동</button><button data-th="light">☀ 라이트</button><button data-th="dark">🌙 다크</button></div>
 <button class="btn" id="installBtn" hidden>📲 앱으로 설치</button><div class="sub" id="saveSt"></div>
 <div class="sum" id="kpis"></div></aside>
 <main class="main"><div id="phead" class="pagehead"></div><div id="view"></div>
-<div class="note" id="protoNote">구조 확인용 프로토타입입니다. 화면에서 고친 값은 이 창을 닫으면 사라지므로, 남기려면 왼쪽 "백업"에서 파일로 내려받고 다음에 "백업 불러오기"로 여세요. 계좌번호는 넣지 않았습니다.</div></main></div>
+<div class="note" id="protoNote">구조 확인용 파일입니다. 연결 설정을 하지 않으면 고친 값은 이 창을 닫으면 사라집니다. 계좌번호는 넣지 않았습니다.</div></main></div>
 <div id="toast"></div>
 <div id="confirmBox" role="dialog" aria-modal="true" aria-labelledby="cfTitle"><div class="cf" id="cfPanel"><div class="cf-head"><span class="cf-icon" id="cfIcon">❓</span><span id="cfTitle">확인</span></div><div class="cf-body" id="cfBody"></div><div class="cf-foot"><button class="btn" id="cfCancel">취소</button><button class="btn primary" id="cfOk">확인</button></div></div></div>
 <div id="loading" role="status" aria-live="polite"><div class="load-box"><div class="spinner"></div><div id="loadingMsg">처리 중…</div><div id="loadingSub"></div></div></div>
@@ -426,11 +426,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(a==='applyRule')return applyRule(m);
  if(a==='resetRule')return ask({title:'정상 납입일로 되돌릴까요?',body:`<b>미납 ${m.inst.filter(i=>!i.paid).length}개 회차</b>의 실제(예정) 납입일을 납입 예정일로 바꿉니다.\n납입 완료된 회차는 바뀌지 않습니다.`,ok:'되돌리기'},()=>{m.inst.forEach(i=>{if(!i.paid)i.act=i.plan});toast('되돌렸습니다.');keep(detail)})});
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.view=b.dataset.t;S.from=null;go()});
-$('exp').onclick=()=>{try{const blob=new Blob([JSON.stringify({v:3,saved:todayS,items:DATA,notes:NOTES},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='예적금_관리_데이터_'+todayS+'.json';document.body.appendChild(a);a.click();a.remove();toast('데이터 파일로 내보냈습니다.')}catch(err){toast('내보내기에 실패했습니다: '+err.message,true)}};
-$('imp').onclick=()=>$('file').click();
-$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;showLoading('파일을 읽는 중…',esc(f.name));const r=new FileReader();
- r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.items))throw new Error('예적금 관리 데이터 파일이 아닙니다.');hideLoading();ask({title:'현재 데이터를 불러온 파일로 바꿀까요?',body:`<b>${esc(f.name)}</b>\n<b>${d.items.length}건</b>으로 현재 화면의 데이터를 모두 바꿉니다.`,ok:d.items.length+'건 불러오기',danger:true},()=>{DATA=d.items;NOTES=Array.isArray(d.notes)?d.notes:NOTES;persistNotes();NEXT=Math.max(0,...DATA.map(m=>m.id))+1;S.view='list';toast('불러왔습니다.');go()})}catch(err){hideLoading();toast(err.message||String(err),true)}e.target.value=''};
- r.onerror=()=>{hideLoading();toast('파일을 읽지 못했습니다.',true)};r.readAsText(f)};
+
 (function(){const c=getConn();if(c){$('cUrl').value=c.url;$('cKey').placeholder='저장됨 (바꾸려면 새로 입력)';$('cCid').value=c.cid||'';$('connBox').open=false;const pn=$('protoNote');if(pn)pn.style.display='none'}else{$('connBox').open=true;$('cNote').textContent='연결하기 전에는 이 창 안에서만 유지됩니다.';if(!RAW.length){const pn=$('protoNote');if(pn)pn.innerHTML='왼쪽 <b>🔗 연결 설정</b>에 웹앱 주소와 비밀키를 넣으면 구글 시트의 자료를 불러옵니다.'}}
  if(c&&c.cid){$('cNote').textContent='구글 로그인은 GitHub Pages 같은 웹 주소에서만 동작합니다. 안 되면 비밀키로 연결됩니다.';const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>{try{google.accounts.id.initialize({client_id:c.cid,callback:r=>{gIdToken=r.credential;toast('구글 로그인됨')}});google.accounts.id.renderButton($('gBtn'),{theme:'outline',size:'medium',text:'signin_with'})}catch(e){}};document.head.appendChild(s)}
  $('cSave').onclick=async()=>{const url=$('cUrl').value.trim(),old=getConn(),key=$('cKey').value.trim()||(old&&old.key)||'',cid=$('cCid').value.trim();
