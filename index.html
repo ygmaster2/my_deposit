@@ -19,7 +19,7 @@ button{font:inherit;color:var(--ink)}
 .tabs{display:flex;gap:6px;margin:8px 0 14px;flex-wrap:wrap}
 .tab,.chip,.btn{border:1px solid var(--line);background:var(--card);padding:7px 14px;border-radius:999px;cursor:pointer}
 .tab.on,.chip.on,.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
-.btn.sm{padding:3px 10px;font-size:12px}.lockbtn{white-space:nowrap;font-weight:700}.lockbtn.on{background:var(--acc2);border-color:var(--acc)}.lockbtn.off{background:#fef3c7;border-color:#f59e0b;color:#92400e}input[type=checkbox]:disabled{opacity:.55;cursor:not-allowed}.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.sm{padding:3px 10px;font-size:12px}.ychip{border:1px solid var(--line);background:var(--card);padding:4px 12px;border-radius:999px;cursor:pointer;font-size:13px}.ychip.on{background:var(--acc2);border-color:var(--acc);font-weight:700}.lockbtn{white-space:nowrap;font-weight:700}.lockbtn.on{background:var(--acc2);border-color:var(--acc)}.lockbtn.off{background:#fef3c7;border-color:#f59e0b;color:#92400e}input[type=checkbox]:disabled{opacity:.55;cursor:not-allowed}.btn.danger{color:var(--danger);border-color:var(--danger)}
 button:disabled{opacity:.5;cursor:not-allowed}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto}
 table{border-collapse:collapse;width:100%;white-space:nowrap}
@@ -272,8 +272,9 @@ function kpis(){const act=DATA.filter(m=>status(m)==='진행'&&m.kind==='적금'
  $('asof').textContent='기준일 '+todayS+' · 전체 '+DATA.length+'건';
  $('kpis').innerHTML=[['진행 중 적금',act.length+'건'],['적금 납입 누계',won(sav/10000)+'만원'],['진행 중 예금',won(dep/10000)+'만원'],['총 납입금 (적금+예금)',won((sav+dep)/10000)+'만원'],['월 기본 납입 합계',won(mon/10000)+'만원'],['지연 미납',lateN+'회 · '+won(lateS/10000)+'만원'],['가장 가까운 만기',next?next.end+' · '+next.branch:'-']].map(x=>`<div class="sr"><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join('')}
 const dday=s=>{const d=diff(s,todayS);return d>=0?'D-'+d:'D+'+(-d)};
-function list(){const rows=DATA.filter(m=>S.filter==='전체'||status(m)===S.filter).sort((a,b)=>S.filter==='완료'?b.end.localeCompare(a.end):a.end.localeCompare(b.end));
+function list(){const base=DATA.filter(m=>S.filter==='전체'||status(m)===S.filter),yrs=[...new Set(base.map(incYear))].sort(),yy=yrs.includes(S.year)?S.year:'',rows=base.filter(m=>!yy||incYear(m)===yy).sort((a,b)=>S.filter==='완료'?b.end.localeCompare(a.end):a.end.localeCompare(b.end));
  $('view').innerHTML=`<div class="filters">${['진행','완료','전체'].map(f=>`<button class="chip ${f===S.filter?'on':''}" data-f="${f}">${f}</button>`).join('')}<span class="sub">${rows.length}건 · 현재 납입금 합계 <b style="color:var(--ink)">${won(rows.reduce((s,m)=>s+paidAmt(m),0))}원</b> (적금 ${won(rows.filter(m=>m.kind==='적금').reduce((s,m)=>s+paidAmt(m),0))} + 예금 ${won(rows.filter(m=>m.kind==='예금').reduce((s,m)=>s+paidAmt(m),0))}) · 만기금액 합계 ${won(rows.reduce((s,m)=>s+mat(m),0))}원 · 세전 이자 합계 ${won(rows.reduce((s,m)=>s+grossOf(m).v,0))}원</span><span style="flex:1"></span><button class="btn primary" data-a="newItem">+ 등록</button></div>
+ <div class="filters" style="margin-top:-4px"><span class="sub">만기 연도</span><button class="ychip ${yy?'':'on'}" data-a="yr" data-y="">전체</button>${yrs.map(y=>`<button class="ychip ${y===yy?'on':''}" data-a="yr" data-y="${y}">${y}년</button>`).join('')}</div>
  <div class="card pscroll"><table><thead><tr><th class="l">만기</th><th class="l">구분</th><th class="l">기관 / 지점</th><th class="l">상품</th><th>월 납입/가입액</th><th>진행</th><th>현재 납입금</th><th>적용금리</th><th>만기금액</th><th>세전 이자</th><th class="l">만기 후 메모</th></tr></thead><tbody>`+
  rows.map(m=>{const p=m.inst?paidCnt(m)/m.inst.length:null;return `<tr class="row" data-id="${m.id}"><td class="l">${m.end}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:''}</td><td class="l">${m.kind}</td><td class="l">${esc(m.bank)} / ${esc(m.branch)}</td><td class="l">${esc(m.product)}</td><td>${won(m.amount)}</td><td>${p==null?'<span class="pill">예치</span>':paidCnt(m)+'/'+m.inst.length+`<span class="prog"><i style="width:${p*100}%"></i></span>`}</td><td>${won(paidAmt(m))}</td><td>${appliedRate(m)}%</td><td>${won(mat(m))}${m.actualMaturity==null?' <span class="pill">계산</span>':''}</td><td>${won(grossOf(m).v)}${srcPill(grossOf(m))}</td><td class="l">${esc(m.after)}</td></tr>`}).join('')+`</tbody></table></div>`}
 
@@ -514,6 +515,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(el.matches('tr.row,.w')){S.from=S.view==='detail'?S.from:S.view;S.sel=+el.dataset.id;S.view='detail';S.rule='';S.ruleDates=[];S.ff=null;S.outDraft=false;S.pickEnd=false;S.fscroll=true;S.dtab='info';window.scrollTo(0,0);return go()}
  const a=el.dataset.a,m=get(S.sel);if(!a)return;
  if(a==='ack'){const x=get(+el.dataset.id);if(!x)return;if(el.dataset.k==='gen')x.generated=false;if(el.dataset.k==='prog')x.excelProg=null;if(el.dataset.k.startsWith('mat:'))x.ack=[...(x.ack||[]).filter(s=>!s.startsWith('mat:')),el.dataset.k];toast('확인 완료로 표시했습니다.');return keep(check)}
+ if(a==='yr'){S.year=el.dataset.y;return keep(list)}
  if(a==='iyr'){const y=el.dataset.y;S.iopen=S.iopen||{};const cur=todayS.slice(0,4);S.iopen[y]=!(S.iopen[y]===undefined?y===cur:S.iopen[y]);return keep(intr)}
  if(a==='lock'){if(S.lock){S.lock=false;clearTimeout(lockT);lockT=setTimeout(relock,180000);toast('잠금을 풀었습니다. 3분 뒤 자동으로 다시 잠깁니다.')}else{S.lock=true;clearTimeout(lockT);toast('다시 잠갔습니다.')}return keep(()=>({dash,detail})[S.view]())}
  if(a==='newItem'){S.draft=mkDraft('적금');S.from='list';S.view='new';window.scrollTo(0,0);return go()}
