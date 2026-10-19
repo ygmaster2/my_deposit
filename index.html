@@ -113,7 +113,72 @@ td input{padding:2px 5px}
 .spinner{width:34px;height:34px;border:4px solid #dbeafe;border-top-color:var(--acc);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loadingMsg{font-weight:800}#loadingSub{margin-top:6px;color:var(--sub);font-size:.82rem;min-height:1.2em}
-</style></head><body><div class="app"><aside class="side"><div><h1>예적금 관리</h1><div class="sub" id="asof"></div></div>
+
+/* ===== 모바일 전용 (PC 화면은 그대로) ===== */
+.mset{display:none}
+@media(max-width:820px){
+ body{padding-bottom:76px;-webkit-text-size-adjust:100%}
+ .app{align-content:start}
+ .side{position:sticky;top:0;z-index:30;padding:8px 12px;gap:0;flex-direction:row;flex-wrap:wrap;align-items:center;border-right:0;border-bottom:1px solid var(--line)}
+ .side>div:first-child{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}.side h1{font-size:16px;white-space:nowrap}.side #asof{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mset{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:50%;font-size:18px}
+ .side .more,.side .theme,.side #installBtn,.side #saveSt{display:none;width:100%;margin-top:10px}
+ .side.showset .more,.side.showset .theme{display:block}.side.showset #installBtn:not([hidden]){display:block}.side.showset #saveSt{display:block}
+ .side.showset .theme{display:flex}
+ .nav{position:fixed;left:0;right:0;bottom:0;z-index:35;flex-direction:row;flex-wrap:nowrap;gap:2px;overflow-x:auto;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+ .nav .tab{flex:none;min-height:46px;padding:4px 12px;font-size:12px;white-space:nowrap;text-align:center;border-radius:10px;line-height:1.25}
+ .main{padding:10px 10px 24px}
+ #toast{bottom:92px;max-width:92vw;text-align:center}
+ #protoNote{display:none}
+ .pagehead{flex-wrap:wrap;gap:8px;padding:2px 0 10px;margin-bottom:10px}
+ .pagehead .ic{width:34px;height:34px;font-size:20px;border-radius:10px}.pagehead h2{font-size:17px}.pagehead .ps{display:none}
+ .pagehead>div[style*="margin-left:auto"]{margin-left:0!important;width:100%;justify-content:flex-end}
+ .btn,.chip,.ychip,.tab{min-height:40px}.btn.sm{min-height:34px;padding:4px 12px}.ychip{min-height:34px}
+ input[type=checkbox]{width:24px;height:24px}
+ input,select,textarea{font-size:16px!important}
+ .filters{gap:6px}
+ .pscroll,.card.pscroll,.card.pscroll.hp{max-height:none;min-height:0}
+ .pscroll table:not(.lt) th:first-child,.pscroll table:not(.lt) td:first-child{position:sticky;left:0;background:var(--card);z-index:1}
+ .fgrid{grid-template-columns:1fr}.fside{position:static}
+ .form{grid-template-columns:84px 1fr}
+ .rows2[style*="120px"]{grid-template-columns:90px 1fr!important}
+ .dashgrid{grid-template-columns:minmax(0,1fr)}
+ .mts{flex:1 1 100%;order:5}
+ .cal{grid-template-columns:repeat(7,minmax(0,1fr))}.day{min-height:54px;padding:3px}.day .n{font-size:11px}.cal .dow{padding:4px 0}
+ .ch{font-size:0;height:6px;padding:0;margin-top:3px;border-radius:3px}
+ .calhead{height:auto;flex-wrap:wrap}
+ .cf{width:calc(100vw - 24px)}.cf-body{padding-left:20px}
+ /* 목록: 표 대신 카드 */
+ table.lt,table.lt tbody{display:block}table.lt thead{display:none}
+ table.lt tr.row{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:12px;border-bottom:1px solid var(--line)}
+ table.lt tr.row.ysep{border-top:3px solid var(--ink)}
+ table.lt td{display:block;padding:0;border:0!important;text-align:left!important;white-space:normal;min-width:0}
+ table.lt td::before{content:attr(data-l);display:block;font-size:11px;color:var(--sub);font-weight:400}
+ table.lt td:nth-child(3){grid-column:1/-1;order:-2;font-weight:700;font-size:15px}table.lt td:nth-child(3)::before{display:none}
+ table.lt td:nth-child(4){grid-column:1/-1;order:-1;color:var(--sub);margin-bottom:4px}table.lt td:nth-child(4)::before{display:none}
+ table.lt td:nth-child(2){display:none}
+ table.lt td:last-child{grid-column:1/-1}table.lt td:last-child:empty{display:none}
+ table.lt td .prog{display:inline-block;vertical-align:middle}
+ /* 회차 표: 한 회차를 카드로 */
+ table.it,table.it tbody{display:block}table.it thead{display:none}
+ .card.tscroll{max-height:none;overflow:visible}
+ table.it tr{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 8px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:center}
+ table.it td{display:block;padding:0;border:0!important;text-align:left!important;white-space:normal;min-width:0;position:static!important}
+ table.it td::before{content:attr(data-l);display:block;font-size:11px;color:var(--sub)}
+ table.it td[data-l="회차"]{grid-column:span 2;order:1;font-weight:700;font-size:16px}table.it td[data-l="회차"]::before{display:none}
+ table.it td[data-l="납입"]{grid-column:span 2;order:2}
+ table.it td[data-l="자동이체"]{grid-column:span 2;order:3}
+ table.it td[data-l="납입 예정일"]{grid-column:span 3;order:4}
+ table.it td[data-l="실제(예정) 납입일"]{grid-column:span 3;order:5}
+ table.it td[data-l="재원"]{grid-column:1/-1;order:6}
+ table.it td[data-l="상태"]{grid-column:span 2;order:7}
+ table.it td[data-l="선납이연일"]{grid-column:span 2;order:8}
+ table.it td[data-l="누적 선납이연일"]{grid-column:span 2;order:9}
+ table.it td[data-l="재원"]:empty{display:none}
+ .dcell input{width:100%;min-width:0}.dcell{justify-content:flex-start}
+ table.it tr.paid{background:rgba(18,128,92,.06)}table.it tr.hi{background:rgba(192,53,43,.08)}
+}
+</style></head><body><div class="app"><aside class="side"><div><h1>예적금 관리</h1><div class="sub" id="asof"></div></div><button class="btn mset" id="mSet" title="연결·화면 설정">⚙</button>
 <nav class="nav" id="tabs"><button class="tab on" data-t="dash">📅 대시보드</button><button class="tab" data-t="list">📋 목록</button><button class="tab" data-t="flow">💰 월별 자금 흐름</button><button class="tab" data-t="alloc">🔀 재원 배분</button><button class="tab" data-t="intr">🧾 연도별 이자</button><button class="tab" data-t="memo">📝 메모</button><button class="tab" data-t="check">✔ 점검</button></nav>
 <details class="more" id="connBox"><summary>🔗 연결 설정</summary><div class="cset"><label>웹앱 주소 (Apps Script 배포 URL)</label><input id="cUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><label>비밀키</label><input id="cKey" type="password" placeholder="설정한 비밀키" autocomplete="off"><label>구글 클라이언트 ID (선택)</label><input id="cCid" placeholder="…apps.googleusercontent.com" autocomplete="off"><div id="gBtn"></div><div class="side-actions"><button class="btn" id="cSave">연결 저장</button><button class="btn" id="cOff">연결 해제</button></div><div class="note" id="cNote"></div></div></details>
 
@@ -278,8 +343,9 @@ const dday=s=>{const d=diff(s,todayS);return d>=0?'D-'+d:'D+'+(-d)};
 function list(){const base=DATA.filter(m=>S.filter==='전체'||status(m)===S.filter),yrs=[...new Set(base.map(incYear))].sort(),yy=yrs.includes(S.year)?S.year:'',rows=base.filter(m=>!yy||incYear(m)===yy).sort((a,b)=>S.filter==='완료'?incDate(b).localeCompare(incDate(a)):incDate(a).localeCompare(incDate(b)));
  $('view').innerHTML=`<div class="filters">${['진행','완료','전체'].map(f=>`<button class="chip ${f===S.filter?'on':''}" data-f="${f}">${f}</button>`).join('')}<span class="sub">${rows.length}건 · 현재 납입금 합계 <b style="color:var(--ink)">${won(rows.reduce((s,m)=>s+paidAmt(m),0))}원</b> (적금 ${won(rows.filter(m=>m.kind==='적금').reduce((s,m)=>s+paidAmt(m),0))} + 예금 ${won(rows.filter(m=>m.kind==='예금').reduce((s,m)=>s+paidAmt(m),0))}) · 만기금액 합계 ${won(rows.reduce((s,m)=>s+mat(m),0))}원 · 세전 이자 합계 ${won(rows.reduce((s,m)=>s+grossOf(m).v,0))}원</span><span style="flex:1"></span><button class="btn primary" data-a="newItem">+ 등록</button></div>
  <div class="filters" style="margin-top:-4px"><span class="sub">만기 연도</span><button class="ychip ${yy?'':'on'}" data-a="yr" data-y="">전체</button>${yrs.map(y=>`<button class="ychip ${y===yy?'on':''}" data-a="yr" data-y="${y}">${y}년</button>`).join('')}</div>
- <div class="card pscroll"><table><thead><tr><th class="l">만기</th><th class="l">구분</th><th class="l">기관 / 지점</th><th class="l">상품</th><th>월 납입/가입액</th><th>진행</th><th>현재 납입금</th><th>적용금리</th><th>만기금액</th><th>세전 이자</th><th class="l">만기 후 메모</th></tr></thead><tbody>`+
- rows.map((m,ri)=>{const p=m.inst?paidCnt(m)/m.inst.length:null,ys=ri>0&&incYear(rows[ri-1])!==incYear(m);return `<tr class="row${ys?' ysep':''}" data-id="${m.id}"><td class="l">${m.end}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:''}</td><td class="l">${m.kind}</td><td class="l">${esc(m.bank)} / ${esc(m.branch)}</td><td class="l">${esc(m.product)}</td><td>${won(m.amount)}</td><td>${p==null?'<span class="pill">예치</span>':paidCnt(m)+'/'+m.inst.length+`<span class="prog"><i style="width:${p*100}%"></i></span>`}</td><td>${won(paidAmt(m))}</td><td>${appliedRate(m)}%${fixRate(m)!==appliedRate(m)?` <span class="pill warn" title="이미 달성한 조건만 넣은 금리입니다. 자동이체 등 남은 조건을 채우면 예상 금리가 됩니다">확정 ${fixRate(m)}%</span>`:''}</td><td>${won(mat(m))}${m.actualMaturity==null?' <span class="pill">계산</span>':''}</td><td>${won(grossOf(m).v)}${srcPill(grossOf(m))}</td><td class="l">${esc(m.after)}</td></tr>`}).join('')+`</tbody></table></div>`}
+ <div class="card pscroll"><table class="lt"><thead><tr><th class="l">만기</th><th class="l">구분</th><th class="l">기관 / 지점</th><th class="l">상품</th><th>월 납입/가입액</th><th>진행</th><th>현재 납입금</th><th>적용금리</th><th>만기금액</th><th>세전 이자</th><th class="l">만기 후 메모</th></tr></thead><tbody>`+
+ rows.map((m,ri)=>{const p=m.inst?paidCnt(m)/m.inst.length:null,ys=ri>0&&incYear(rows[ri-1])!==incYear(m);return `<tr class="row${ys?' ysep':''}" data-id="${m.id}"><td class="l">${m.end}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:''}</td><td class="l">${m.kind}</td><td class="l">${esc(m.bank)} / ${esc(m.branch)}</td><td class="l">${esc(m.product)}</td><td>${won(m.amount)}</td><td>${p==null?'<span class="pill">예치</span>':paidCnt(m)+'/'+m.inst.length+`<span class="prog"><i style="width:${p*100}%"></i></span>`}</td><td>${won(paidAmt(m))}</td><td>${appliedRate(m)}%${fixRate(m)!==appliedRate(m)?` <span class="pill warn" title="이미 달성한 조건만 넣은 금리입니다. 자동이체 등 남은 조건을 채우면 예상 금리가 됩니다">확정 ${fixRate(m)}%</span>`:''}</td><td>${won(mat(m))}${m.actualMaturity==null?' <span class="pill">계산</span>':''}</td><td>${won(grossOf(m).v)}${srcPill(grossOf(m))}</td><td class="l">${esc(m.after)}</td></tr>`}).join('')+`</tbody></table></div>`;lbl()}
+function lbl(){document.querySelectorAll('table.lt,table.it').forEach(t=>{const h=[...t.querySelectorAll('thead th')].map(x=>x.textContent);t.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>td.dataset.l=h[i]||''))})}
 
 const pad=n=>String(n).padStart(2,'0'),ymdL=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function events(){const ev={};const add=(d,e)=>{if(d)(ev[d]=ev[d]||[]).push(e)};
@@ -386,7 +452,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
   <div style="display:flex;gap:8px;margin-top:8px"><input id="rule" placeholder="1-6-5" value="${esc(S.rule)}" style="max-width:220px"><button class="btn sm" data-a="applyRule">날짜 적용</button><button class="btn sm" data-a="resetRule">정상 납입으로 되돌리기</button></div>
   <div id="ruleInfo"></div><div class="note">규칙으로 안 되는 경우는 아래 표의 실제 납입일을 직접 고치세요. 규칙 적용 뒤 일부 회차만 고쳐도 됩니다.</div></div>
  <div class="sub" style="margin:4px 2px 8px">${hasAuto(m)?`자동이체 <b style="color:var(--ink)">${autoN(m)}회</b> · `:''}납입 <b style="color:var(--ink)">${paidCnt(m)}/${m.inst.length}회</b> · 현재 납입금 <b style="color:var(--ink)">${won(paidAmt(m))}원</b> · 남은 납입 ${won(m.inst.filter(i=>!i.paid).length*m.amount)}원</div>
- <div class="card tscroll"><table><thead><tr><th class="l">회차</th><th>납입 예정일</th><th>실제(예정) 납입일</th><th>납입</th>${hasAuto(m)?'<th>자동이체</th>':''}${m.funds.some(fRanged)?'<th class="l">재원</th>':''}<th class="l">상태</th><th>선납이연일</th><th>누적 선납이연일</th></tr></thead><tbody>${rowsH}</tbody></table></div>
+ <div class="card tscroll"><table class="it"><thead><tr><th class="l">회차</th><th>납입 예정일</th><th>실제(예정) 납입일</th><th>납입</th>${hasAuto(m)?'<th>자동이체</th>':''}${m.funds.some(fRanged)?'<th class="l">재원</th>':''}<th class="l">상태</th><th>선납이연일</th><th>누적 선납이연일</th></tr></thead><tbody>${rowsH}</tbody></table></div>
  <div class="note">${hasAuto(m)?'자동이체 칸은 납입한 회차가 자동이체로 들어갔는지 직접 표시합니다. 새로 납입 체크하면 바로 앞 회차와 같은 방식으로 먼저 표시되니, 다르면 고쳐 주세요. ':''}선납이연일은 이연이면 +, 선납이면 -이며, 누적 선납이연일은 이 값을 회차 순서대로 더한 값입니다. 날짜가 지났는데 납입 체크가 없으면 지연으로 표시됩니다.</div>`:'<div class="box sub">예금은 회차 없이 예치금과 만기금액만 관리합니다.</div>'}
  </div></div>`;
  if(m.inst)ruleInfo(m)}
@@ -400,7 +466,7 @@ function applyRule(m){const p=parseRule(m);if(!p)return toast('규칙을 1-6-5 �
  const dates=[...document.querySelectorAll('[data-rd]')].map(e=>e.value);if(dates.some(d=>!d))return toast('모든 묶음의 납입일을 입력해 주세요.',true);
  ask({title:'납입일을 규칙대로 채울까요?',body:`<b>${esc(S.rule)}</b> 규칙으로 <b>미납 ${m.inst.filter(i=>!i.paid).length}개 회차</b>의 실제(예정) 납입일을 덮어씁니다.\n납입 완료된 회차는 날짜가 바뀌지 않습니다.`,ok:'날짜 적용'},()=>{let i=0;p.forEach((s,k)=>{for(let j=0;j<s;j++){const x=m.inst[i++];if(!x.paid)x.act=dates[k]}});toast('납입일을 채웠습니다.');keep(detail)})}
 const SCR='.tscroll,.pscroll,.daypanel,.mts,.fscroll';
-function keep(fn){const y=window.scrollY,sc=[...document.querySelectorAll(SCR)].map(e=>[e.scrollTop,e.scrollLeft]);fn();phead();kpis();updTabs();document.querySelectorAll(SCR).forEach((e,i)=>{if(sc[i]){e.scrollTop=sc[i][0];e.scrollLeft=sc[i][1]}});window.scrollTo(0,y);fscrollTo();persist()}
+function keep(fn){const y=window.scrollY,sc=[...document.querySelectorAll(SCR)].map(e=>[e.scrollTop,e.scrollLeft]);fn();lbl();phead();kpis();updTabs();document.querySelectorAll(SCR).forEach((e,i)=>{if(sc[i]){e.scrollTop=sc[i][0];e.scrollLeft=sc[i][1]}});window.scrollTo(0,y);fscrollTo();persist()}
 
 function flow(){const months={},mk=s=>s.slice(0,7),cur=mk(todayS);
  const ensure=k=>months[k]||(months[k]={out:0,late:0,inn:0,items:[]});
@@ -481,7 +547,7 @@ function nm(m){return (m.bank+' '+m.branch+' '+(m.product||'')).trim()}
 function memo(){const opts='<option value="">(연결 안 함)</option>'+DATA.map(m=>`<option value="${m.id}" ${String(ndraft.link)===String(m.id)?'selected':''}>${esc(nm(m))} · ${m.end}</option>`).join('');
  const list=NOTES.slice().sort((a,b)=>b.id-a.id).map(n=>{const m=n.link?get(+n.link):null;return `<div class="ncard"><div class="nh"><span>${esc(n.date)}</span>${m?`<span class="nlink" data-a="goto" data-id="${m.id}">${esc(nm(m))}</span>`:''}<span class="sp"></span><button class="ndel" data-a="noteDel" data-nid="${n.id}">삭제</button></div><textarea data-nid="${n.id}" placeholder="메모 내용">${esc(n.text)}</textarea></div>`}).join('');
  $('view').innerHTML=`<div class="card" style="margin-bottom:12px"><div class="nform"><textarea id="ntext" placeholder="적금 관련 내용을 간단히 적어 두세요. 예) 11월 만기금은 신규 12개월 적금에 쓰기">${esc(ndraft.text)}</textarea><div class="nr"><select id="nlink">${opts}</select><button class="btn" data-a="noteAdd" style="margin-left:auto">메모 저장</button></div></div></div><div class="card pscroll hp">${list||'<div style="padding:20px" class="sub">저장된 메모가 없습니다.</div>'}</div><div class="note">메모는 최신 순으로 보입니다. 내용을 고치면 바로 저장되고, 적금과 연결해 두면 이름을 눌러 상세로 갈 수 있습니다.</div>`}
-function go(){({dash,list,detail,flow,check,memo,alloc,intr,new:newForm})[S.view]();fscrollTo();phead();kpis();updTabs();persist()}
+function go(){({dash,list,detail,flow,check,memo,alloc,intr,new:newForm})[S.view]();lbl();fscrollTo();phead();kpis();updTabs();persist()}
 
 /* ---------- 이벤트 ---------- */
 function regen(m,after){const dirty=m.inst&&m.inst.some(i=>i.paid||i.act!==i.plan);
@@ -575,6 +641,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.view=b.dataset.t;S
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 let instEv=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;$('installBtn').hidden=false});
 $('installBtn').onclick=async()=>{if(!instEv)return;instEv.prompt();try{await instEv.userChoice}catch(e){}instEv=null;$('installBtn').hidden=true};
+(()=>{const sd=document.querySelector('.side');$('mSet').onclick=()=>{sd.classList.toggle('showset');if(sd.classList.contains('showset'))$('connBox').open=true};try{if(!localStorage.getItem(CONN_KEY)){sd.classList.add('showset');$('connBox').open=true}}catch(e){}})();
 window.addEventListener('appinstalled',()=>{$('installBtn').hidden=true;toast('앱으로 설치했습니다.')});
 function applyTheme(m){const r=document.documentElement;if(m==='light'||m==='dark')r.dataset.theme=m;else delete r.dataset.theme;document.querySelectorAll('#theme button').forEach(b=>b.classList.toggle('on',b.dataset.th===m))}
 let themeMode='auto';try{themeMode=localStorage.getItem('yj-theme')||'auto'}catch(e){}
