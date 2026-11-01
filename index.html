@@ -280,9 +280,11 @@ const rateBy=(m,f)=>Math.round((m.baseRate+m.perks.filter(p=>f(m,p)).reduce((s,p
 const appliedRate=m=>rateBy(m,perkExp),fixRate=m=>rateBy(m,perkMet);
 const autoShort=m=>m.perks.some(p=>p.mode==='auto'&&!perkMet(m,p)&&perkExp(m,p));
 const maxRate=m=>Math.round((m.baseRate+m.perks.reduce((s,p)=>s+(+p.add||0),0))*1000)/1000;
+const f10=x=>Math.floor(x/10+1e-9)*10;
+function taxOf(g,t){const k=t||'일반과세';if(k==='비과세')return 0;if(k==='세금우대')return f10(g*0.014);const it=f10(g*0.14);return it+f10(it*0.1)}
 function calc(m,rt){const rate=rt!=null?rt:appliedRate(m),n=termN(m);let principal,gross;
  if(m.kind==='예금'){principal=m.amount;gross=m.amount*rate/100*n/12}else{principal=m.amount*n;gross=m.amount*n*(n+1)/2*rate/100/12}
- const tax=gross*(TAX[m.taxType]??0.154),net=gross-tax;return{rate,principal,gross,tax,net,total:principal+net}}
+ const tax=taxOf(gross,m.taxType),net=gross-tax;return{rate,principal,gross,tax,net,total:principal+net}}
 const mat=m=>m.actualMaturity!=null?m.actualMaturity:calc(m).total;
 function grossOf(m){const c=calc(m);
  if(m.actualGross!=null)return{v:+m.actualGross,src:'실제'};
@@ -439,6 +441,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
  <tr><td class="l" style="white-space:nowrap">세금</td><td>${won(c.tax)}</td><td>${won(cf.tax)}</td></tr>
  <tr><td class="l" style="white-space:nowrap">세후 이자</td><td>${won(c.net)}</td><td>${won(cf.net)}</td></tr>
  <tr><td class="l" style="white-space:nowrap"><b>만기금액</b></td><td><b>${won(c.total)}</b></td><td><b>${won(cf.total)}</b></td></tr></tbody></table>
+ <div class="note" style="margin-top:8px">위 표의 예상·확정은 금리로 계산한 값이고(세금은 소득세·지방소득세를 각각 10원 미만 절사), 아래 실제 값은 목록·자금 흐름·연도별 이자 등에 반영됩니다.</div>
  <div style="margin-top:12px;font-weight:700">실제(은행 확인)</div>
  <div class="rows2" style="grid-template-columns:120px 1fr;align-items:center;margin-top:6px"><span>세전 이자</span><input data-f="actualGross" data-t="money" value="${m.actualGross!=null?won(m.actualGross):''}" placeholder="해지·만기 때 받은 세전 이자"><span>만기금액</span><input data-f="actualMaturity" data-t="money" value="${m.actualMaturity!=null?won(m.actualMaturity):''}" placeholder="비우면 예상값 사용"><span>수령일 <span class="sub">(해지 시)</span></span><div style="display:flex;align-items:center;gap:8px"><input type="date" data-f="closedOn" data-t="date" value="${m.closedOn||''}"><span class="sub">비우면 만기일 ${m.end}</span></div></div>
  <div class="note">이자소득은 <b>${incYear(m)}년</b> 소득으로 집계됩니다. (${m.closedOn?'실제 수령일':'만기일'} 기준) · 세전 이자 근거: <b>${grossOf(m).src}</b>${m.closedOn?' · 중도해지했다면 위 "세전 이자"에 실제로 받은 이자를 입력해 주세요.':''}</div>
