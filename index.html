@@ -286,9 +286,12 @@ function calc(m,rt){const rate=rt!=null?rt:appliedRate(m),n=termN(m);let princip
  if(m.kind==='예금'){principal=m.amount;gross=m.amount*rate/100*n/12}else{principal=m.amount*n;gross=m.amount*n*(n+1)/2*rate/100/12}
  const tax=taxOf(gross,m.taxType),net=gross-tax;return{rate,principal,gross,tax,net,total:principal+net}}
 const mat=m=>m.actualMaturity!=null?m.actualMaturity:calc(m).total;
+function grossFromNet(net,t){const r=TAX[t]??0.154,est=net/(1-r);if(t==='비과세'||net<=0)return net;
+ let best=null;for(let g=Math.max(0,Math.floor(est)-40);g<=Math.ceil(est)+40;g++){if(g-taxOf(g,t)===net&&(best===null||Math.abs(g-est)<Math.abs(best-est)))best=g}
+ return best!==null?best:Math.round(est)}
 function grossOf(m){const c=calc(m);
  if(m.actualGross!=null)return{v:+m.actualGross,src:'실제'};
- if(m.actualMaturity!=null){const r=TAX[m.taxType]??0.154;return{v:Math.max(0,m.actualMaturity-c.principal)/(1-r),src:'역산'}}
+ if(m.actualMaturity!=null){return{v:grossFromNet(Math.max(0,Math.round(m.actualMaturity-c.principal)),m.taxType),src:'역산'}}
  return{v:c.gross,src:'계산'}}
 const incDate=m=>m.closedOn||m.end,incYear=m=>incDate(m).slice(0,4);
 const srcPill=g=>g.src==='실제'?'':` <span class="pill" title="${g.src==='역산'?'실제 만기금액에서 거꾸로 계산한 값':'이율로 계산한 예상값'}">${g.src}</span>`;
