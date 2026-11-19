@@ -225,7 +225,7 @@ function build(r){
  const m={id:r.id,kind:r.kind==='예금'?'예금':'적금',bank:r.bank||'',branch:r.branch||'',product:r.product||'',start:r.start,end:r.end,term:termN({term:r.term}),
   amount:r.amount||0,baseRate:r.rate??0,perks:[],autoCount:0,taxType:'일반과세',actualMaturity:r.maturity??null,actualGross:null,closedOn:null,
   perkText:(r.perk||'').toString().replace(/\n/g,' '),payplan:(r.payplan||'').toString().replace(/\n/g,' '),after:(r.after||'').toString().replace(/\n/g,' '),
-  memo:(r.note||'').toString().replace(/\n/g,' '),funds:[],fund:true,excelProg:r.prog||null,generated:false,inst:null};
+  memo:(r.note||'').toString().replace(/\n/g,' '),funds:[],others:[],fund:true,excelProg:r.prog||null,generated:false,inst:null};
  if(r.id===3)m.end='2023-10-31';
  if(r.interest!=null&&r.tax!=null&&(r.interest+r.tax)>0){const t=r.tax/(r.interest+r.tax);m.taxType=t<0.005?'비과세':t<0.05?'세금우대':'일반과세'}
  if(m.kind==='적금'){if(r.inst){m.inst=r.inst}else{m.inst=genInst(m);m.generated=true}}
@@ -316,13 +316,18 @@ function outRow(m,u,k,tg,sel){const {x,f}=u,dis=f.done?'disabled':'',bad=fBad(x,
  <div class="fa">${f.done?'<span class="pill ok">납입 완료</span>':'<span class="pill">예정</span>'}</div>
  <div class="fr">${x.inst?`<input type="number" min="1" max="${x.inst.length}" data-uk="${k}" data-uf="n1" value="${f.n1??''}" placeholder="시작" ${dis}>~<input type="number" min="1" max="${x.inst.length}" data-uk="${k}" data-uf="n2" value="${f.n2??''}" placeholder="끝" ${dis}><span class="sub">회차를 (총 ${x.inst.length}회)</span> <input type="date" data-uk="${k}" data-uf="date" value="${f.date||''}" min="${m.end}" max="${addD(x.end,-1)}" ${dis}>${dwHtml(f.date)}<span class="sub">에 납입</span> <span class="sub">= ${fRanged(f)?(+f.n2-+f.n1+1)+'회분 ':''}<b style="color:var(--ink)">${won(fAmt(x,f))}원</b></span>`:`<span class="sub">금액</span> <input data-uk="${k}" data-uf="amt" data-t="money" value="${f.amt?won(f.amt):''}" placeholder="금액" style="width:140px" ${dis}> <span class="sub">날짜</span> <input type="date" data-uk="${k}" data-uf="date" value="${f.date||''}" min="${m.end}" ${dis}>`}</div>
  ${bad?`<div class="neg" style="grid-column:1/-1;font-size:12px">⚠ ${bad}</div>`:''}<div class="fa">${x.inst&&fRanged(f)&&f.date&&!bad?(f.done?`<button class="btn sm" data-a="outUndo" data-uk="${k}">확인 취소</button>`:(f.date>todayS?`<button class="btn sm" disabled title="납입일(${f.date})이 지나야 확인할 수 있습니다">${diff(f.date,todayS)}일 뒤 확인</button>`:`<button class="btn sm primary" data-a="outDone" data-uk="${k}">납입 확인</button>`)):''}<button class="btn sm" data-a="outDel" data-uk="${k}" ${f.done?'disabled title="확인 취소 후 삭제할 수 있습니다"':''}>삭제</button></div></div>`}
-function outHtml(m){const outs=outsOf(m),M=mat(m),sum=outs.reduce((a,u)=>a+fAmt(u.x,u.f),0),tg=targetsOf(m),sel=selOut(m);
- return `<div class="rows2" style="max-width:520px;margin-bottom:10px"><span>만기일</span><b class="v">${m.end}${dwHtml(m.end)}</b><span>만기금액</span><b class="v">${won(M)}원${m.actualMaturity==null?' <span class="pill">계산</span>':''}</b><span>배분 합계</span><span class="v">${won(sum)}원</span><span>남은 만기금</span><b class="v ${M-sum<0?'neg':''}">${won(M-sum)}원</b></div>
+function outHtml(m){const outs=outsOf(m),M=mat(m),sum=outs.reduce((a,u)=>a+fAmt(u.x,u.f),0),tg=targetsOf(m),sel=selOut(m),oth=othOf(m);
+ return `<div class="rows2" style="max-width:520px;margin-bottom:10px"><span>만기일</span><b class="v">${m.end}${dwHtml(m.end)}</b><span>만기금액</span><b class="v">${won(M)}원${m.actualMaturity==null?' <span class="pill">계산</span>':''}</b><span>배분 합계</span><span class="v">${won(sum)}원</span>${oth?`<span>기타 사용</span><span class="v">${won(oth)}원</span>`:''}<span>남은 만기금</span><b class="v ${M-sum-oth<0?'neg':''}">${won(M-sum-oth)}원</b></div>
  <div class="fgrid"><div>${outs.map((u,k)=>outRow(m,u,k,tg,sel)).join('')}
  ${S.outDraft?`<div class="fund on"><div class="fr"><span class="sub">→ 넣을 적금</span><select data-uf="newto"><option value="">적금 선택…</option>${tg.map(t=>`<option value="${t.id}">${tLabel(t)}</option>`).join('')}</select></div><div class="fa"><button class="btn sm" data-a="cancelOut">취소</button></div></div>`:''}
  ${tg.length?(S.outDraft?'':'<button class="btn sm" data-a="addOut">+ 배분 추가</button>'):`<div class="note neg">이 ${m.kind}(${m.end} 만기)보다 늦게 만기되는 진행 중 적금이 없어 배분할 곳이 없습니다.</div>`}
+ ${othHtml(m,M-sum-oth)}
  ${status(m)==='진행'?`<label class="note" style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" data-f="fund" data-t="chk" ${m.fund?'checked':''}> 남은 만기금을 월별 자금 흐름의 만기금 잔액에 포함하기</label>`:''}
  </div><aside class="fside" id="fside">${tpanelHtml(m)}</aside></div>`}
+function othHtml(m,left){const L=m.others||[];
+ return `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><h4 style="margin:0 0 6px">기타 사용 <span class="sub">(적금 배분 말고 다른 통장 등에 쓴 만기금)</span></h4>
+ ${L.map((o,k)=>`<div class="note">→ ${won(o.amt)}원${o.note?' · '+esc(o.note):''}${o.date?' · '+o.date:''} <button class="btn sm" data-a="othDel" data-k="${k}">삭제</button></div>`).join('')||'<div class="note">없음</div>'}
+ ${S.othDraft?`<div class="fund on" style="margin-top:6px"><div class="fr"><span class="sub">금액</span><input type="number" id="othAmt" min="1" step="1" value="${Math.max(0,left)}" style="width:130px"> <span class="sub">날짜</span><input type="date" id="othDate" value="${todayS}"> <input type="text" id="othNote" maxlength="40" placeholder="어디에 썼나요? 예: 파킹통장" style="flex:1;min-width:140px"></div><div class="fa"><button class="btn sm" data-a="othSave">저장</button> <button class="btn sm" data-a="othCancel">취소</button></div></div>`:`<button class="btn sm" data-a="othAdd" style="margin-top:6px">+ 남은 금액 다른 곳에 사용</button>`}</div>`}
 function tpanelHtml(m){const u=selOut(m);
  if(!u)return `<div class="sub">${S.outDraft?'만기금을 넣을 적금을 고르면 그 적금의 회차가 여기에 나옵니다.':'<b>+ 배분 추가</b>로 만기금을 넣을 적금을 고르면 그 적금의 회차가 여기에 나옵니다.'}</div>`;
  const {x,f}=u,canPick=x.inst&&!f.done;
@@ -369,6 +374,7 @@ function extBox(m){const e=extInfo(m),b=lastBundle(m);if(!e.cnt)return '';
 function calcOut(){const m=get(S.sel),el=$('calcOut');if(!m||!el)return;const b=lastBundle(m),D=$('calcD').value;if(!b||!D){el.textContent='';return}const net=calcNet(m,b,D),d=extDays(net,m.inst.length);el.innerHTML=`순지연 <b>${sg(net)}일</b> → 연장 <b>${d}일</b> → 만기 <b class="${d?'neg':'pos'}">${d?addD(m.end,d):m.end}</b>`}
 function fBad(m,f){const s=get(f.from);if(!s||!f.date)return '';if(f.date<s.end)return `출처 만기일(${s.end}) 전에는 만기금을 쓸 수 없습니다.`;if(f.date>=m.end)return `넣을 적금의 만기일(${m.end}) 전에 내야 합니다.`;return ''}
 const srcOfInst=(m,n)=>m.funds.find(f=>fRanged(f)&&n>=+f.n1&&n<=+f.n2);
+const othOf=m=>(m.others||[]).reduce((s,o)=>s+(+o.amt||0),0);
 const allocOf=id=>DATA.reduce((s,x)=>s+x.funds.filter(f=>f.from===id).reduce((a,f)=>a+(+f.amt||0),0),0);
 
 /* ---------- 화면 ---------- */
@@ -515,7 +521,7 @@ function flow(){const months={},mk=s=>s.slice(0,7),cur=mk(todayS);
  const ensure=k=>months[k]||(months[k]={out:0,late:0,inn:0,items:[]});
  DATA.filter(m=>status(m)==='진행').forEach(m=>{
   if(m.inst)m.inst.forEach(i=>{if(i.paid)return;const d=i.act||i.plan;if(!d)return;if(d<todayS){ensure(cur).late+=m.amount;return}ensure(mk(d)).out+=m.amount});
-  if(m.fund){const e=ensure(mk(m.end)),M=mat(m),al=allocOf(m.id);e.inn+=M;e.items.push(esc(m.branch)+' '+man(M)+(al?` (배분 ${man(al)} / 남음 ${man(M-al)})`:''))}});
+  if(m.fund){const e=ensure(mk(m.end)),M=mat(m),al=allocOf(m.id)+othOf(m);e.inn+=M;e.items.push(esc(m.branch)+' '+man(M)+(al?` (배분 ${man(al)} / 남음 ${man(M-al)})`:''))}});
  const keys=Object.keys(months).sort();let pool=0,cashTotal=0;
  const rows=keys.map(k=>{const e=months[k];pool+=e.inn;const need=e.out+e.late,use=Math.min(pool,need);pool-=use;const cash=need-use;cashTotal+=cash;return{k,...e,use,cash,pool}});
  const mx=Math.max(1,...rows.map(r=>Math.max(r.out+r.late,r.inn)));
@@ -531,7 +537,7 @@ function warns(){const w=[];DATA.filter(m=>status(m)==='진행').forEach(m=>{con
   if(m.inst.length!==termN(m))add('bad',`기간 ${termN(m)}개월과 회차 수 ${m.inst.length}가 다릅니다.`);
   m.perks.filter(p=>p.mode==='auto').forEach(p=>{const need=needOf(m,p),have=autoN(m),rem=m.inst.filter(i=>!i.paid).length;if(have+rem<need)add('bad',`우대 조건(${p.name}) 충족이 불가능합니다. (자동이체 ${have}회 + 남은 ${rem}회 < 필요 ${need}회)`);else if(have<need)add('warn',`우대 조건(${p.name}) 자동이체 ${have}/${need}회 · 아직 ${need-have}회 더 필요합니다.`)})}
  if(m.actualMaturity!=null){const d=m.actualMaturity-calc(m).total,k='mat:'+Math.round(d);if(Math.abs(d)>3000&&!(m.ack||[]).includes(k))add('warn',`계산 만기금액과 실제 값이 ${sg(Math.round(d))}원 차이납니다. (선납·이연, 우대금리, 이자 방식 확인) 실제 값이 맞으면 "확인 완료"를 누르세요.`,k)}
- const al=allocOf(m.id),M=mat(m);if(al>M)add('bad',`배분한 재원(${won(al)}원)이 만기금액(${won(M)}원)보다 큽니다.`)});
+ const al=allocOf(m.id)+othOf(m),M=mat(m);if(al>M)add('bad',`배분한 재원(${won(al)}원)이 만기금액(${won(M)}원)보다 큽니다.`)});
  DATA.forEach(m=>{const nm=m.branch+' '+m.product,seen={};m.funds.forEach(f=>{if(!f.from||!fAmt(m,f))w.push({id:m.id,lv:'warn',t:'재원 연결의 출처나 회차가 비어 있습니다.',name:nm});
   if(fBad(m,f))w.push({id:m.id,lv:'bad',t:'재원 납입일 오류: '+fBad(m,f),name:nm});
   if(fRanged(f)&&!f.done&&f.date&&f.date<todayS)w.push({id:m.id,lv:'bad',t:`만기금 납입 예정일(${f.date})이 지났습니다. 실제로 냈으면 재원 탭에서 "납입 확인"을 눌러 주세요. (${f.n1}~${f.n2}회)`,name:nm});
@@ -549,17 +555,17 @@ function intr(){const Y={};S.iopen=S.iopen||{};
  <div class="note" style="margin-top:10px">· 이자소득은 만기일(해지했다면 실제 수령일)이 속한 해에 한꺼번에 잡히는 것으로 계산합니다.<br>· 일반과세·세금우대·비과세 구분 없이 <b>세전 이자를 모두 합산</b>합니다.<br>· 파킹통장·다른 금융기관 이자·배당은 포함되지 않습니다. 금융소득종합과세(연 2,000만 원) 판단은 홈택스에서 확인하세요.<br>· "계산"은 이율로 계산한 예상값, "역산"은 실제 만기금액에서 거꾸로 구한 값, 표시 없음은 직접 입력한 실제 이자입니다.</div>`}
 function alloc(){const all=S.afilter==='전체';
  const rows=DATA.filter(m=>all||status(m)==='진행'||outsOf(m).some(u=>!u.f.done)).filter(m=>all?true:true).sort((a,b)=>a.end.localeCompare(b.end));
- let T={M:0,plan:0,done:0};const body=rows.map(m=>{const o=outsOf(m),M=mat(m),pl=o.filter(u=>!u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),dn=o.filter(u=>u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),left=M-pl-dn;
-  if(status(m)==='진행'){T.M+=M;T.plan+=pl;T.done+=dn}
-  const p=M>0?Math.min(100,(pl+dn)/M*100):0;
+ let T={M:0,plan:0,done:0,oth:0};const body=rows.map(m=>{const o=outsOf(m),M=mat(m),pl=o.filter(u=>!u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),dn=o.filter(u=>u.f.done).reduce((a,u)=>a+fAmt(u.x,u.f),0),oth=othOf(m),left=M-pl-dn-oth;
+  if(status(m)==='진행'){T.M+=M;T.plan+=pl;T.done+=dn;T.oth+=oth}
+  const p=M>0?Math.min(100,(pl+dn+oth)/M*100):0;
   const inc=m.funds.reduce((a,f)=>a+fAmt(m,f),0),fr=freeIns(m);
   return `<tr><td class="l">${m.end}${dwHtml(m.end)}${status(m)==='진행'?` <span class="pill">${dday(m.end)}</span>`:' <span class="pill">완료</span>'}</td><td class="l"><span class="nlink" data-a="goto" data-id="${m.id}" data-tab="fund">${esc(m.branch)}</span><div class="sub">${esc(m.product||'')} · ${m.kind} ${termN(m)}개월</div></td>
   <td>${m.inst?`${paidCnt(m)}/${m.inst.length}회<div class="sub">${won(paidAmt(m))}원</div><span class="prog" style="display:block;margin:2px 0 0 auto"><i style="width:${paidCnt(m)/m.inst.length*100}%"></i></span>`:'<span class="pill">예치</span><div class="sub">'+won(m.amount)+'원</div>'}</td>
   <td>${m.inst?(fr.length?`<b>${fr.length}회</b><div class="sub">${won(fr.length*m.amount)}원</div>`:'<span class="pill ok">모두 정함</span>'):'-'}${inc?`<div class="sub" style="color:var(--acc)">만기금 ${won(inc)}원 받음/예정</div>`:''}</td>
   <td>${won(M)}</td><td>${dn?won(dn):'-'}<div class="sub">${pl?'예정 '+won(pl):''}</div></td><td class="${left<0?'neg':''}"><b>${won(left)}</b><span class="prog" title="배분율 ${Math.round(p)}%" style="display:block;margin:3px 0 0 auto"><i style="width:${p}%"></i></span></td>
-  <td class="l" style="white-space:normal;min-width:280px">${o.length?o.map(u=>`<div style="font-size:12px;line-height:1.6">→ <span class="nlink" data-a="goto" data-id="${u.x.id}" data-tab="inst">${esc(u.x.branch)}</span>${fRanged(u.f)?` ${u.f.n1}~${u.f.n2}회`:''}${u.f.date?` · ${u.f.date}`:''} · ${won(fAmt(u.x,u.f))} ${u.f.done?'<span class="pill ok">완료</span>':(u.f.date&&u.f.date<todayS?'<span class="pill bad">확인 필요</span>':'<span class="pill">예정</span>')}${fBad(u.x,u.f)?' <span class="pill bad">날짜 오류</span>':''}</div>`).join(''):'<span class="sub">배분 없음</span>'}</td></tr>`}).join('');
+  <td class="l" style="white-space:normal;min-width:280px">${o.length?o.map(u=>`<div style="font-size:12px;line-height:1.6">→ <span class="nlink" data-a="goto" data-id="${u.x.id}" data-tab="inst">${esc(u.x.branch)}</span>${fRanged(u.f)?` ${u.f.n1}~${u.f.n2}회`:''}${u.f.date?` · ${u.f.date}`:''} · ${won(fAmt(u.x,u.f))} ${u.f.done?'<span class="pill ok">완료</span>':(u.f.date&&u.f.date<todayS?'<span class="pill bad">확인 필요</span>':'<span class="pill">예정</span>')}${fBad(u.x,u.f)?' <span class="pill bad">날짜 오류</span>':''}</div>`).join(''):(oth?'':'<span class="sub">배분 없음</span>')}${(m.others||[]).map(o=>`<div style="font-size:12px;line-height:1.6">→ 기타 ${won(o.amt)}원${o.note?' · '+esc(o.note):''}${o.date?' · '+o.date:''} <span class="pill ok">기타</span></div>`).join('')}</td></tr>`}).join('');
  $('view').innerHTML=`<div class="filters">${['진행','전체'].map(f=>`<button class="mt ${f===(S.afilter||'진행')?'on':''}" data-a="afilter" data-k="${f}" style="padding:5px 14px;font-size:13px">${f==='진행'?'진행 중':'전체(완료 포함)'}</button>`).join('')}<span class="sub">${rows.length}건</span></div>
- <div class="grid3" style="margin-bottom:12px"><div class="box"><div class="sub">진행 중 만기금 합계</div><b style="font-size:20px">${won(T.M)}원</b></div><div class="box"><div class="sub">배분 · 납입 완료 / 예정</div><b style="font-size:20px">${won(T.done)}</b> <span class="sub">/ ${won(T.plan)}원</span></div><div class="box"><div class="sub">아직 배분 안 한 만기금</div><b style="font-size:20px" class="${T.M-T.plan-T.done<0?'neg':''}">${won(T.M-T.plan-T.done)}원</b></div></div>
+ <div class="grid3" style="margin-bottom:12px"><div class="box"><div class="sub">진행 중 만기금 합계</div><b style="font-size:20px">${won(T.M)}원</b></div><div class="box"><div class="sub">배분 · 납입 완료 / 예정</div><b style="font-size:20px">${won(T.done)}</b> <span class="sub">/ ${won(T.plan)}원</span></div><div class="box"><div class="sub">아직 배분 안 한 만기금</div><b style="font-size:20px" class="${T.M-T.plan-T.done-T.oth<0?'neg':''}">${won(T.M-T.plan-T.done-T.oth)}원</b></div></div>
  <div class="card pscroll hp"><table><thead><tr><th class="l">만기</th><th class="l">적금·예금</th><th>납입 현황</th><th title="아직 안 냈고 만기금 배분도 안 정한 회차">남은 납입<br><span style="font-weight:400">(재원 미정)</span></th><th>만기금액</th><th>배분 완료<br><span style="font-weight:400">/ 예정</span></th><th>남은 만기금</th><th class="l">배분 내역</th></tr></thead><tbody>${body||'<tr><td colspan="9" class="sub" style="padding:20px">표시할 항목이 없습니다.</td></tr>'}</tbody></table></div>
  <div class="note">"남은 납입(재원 미정)"은 아직 안 냈고 만기금 배분도 정하지 않은 회차라서, 만기금을 넣을 곳을 고를 때 참고하면 됩니다. 배분 추가·수정은 출처 이름을 눌러 그 적금의 재원 탭에서 합니다. "확인 필요"는 납입일이 지났는데 납입 확인을 하지 않은 배분입니다.</div>`}
 let SEEN=new Set();try{SEEN=new Set(JSON.parse(localStorage.getItem('yj-seen')||'[]'))}catch(e){}
@@ -653,6 +659,10 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(a==='xlDone')return ask({title:'엑셀 대조를 끝낼까요?',body:'엑셀 진행 표시와 비교하는 점검, 회차를 자동 생성한 항목 점검을 모두 끕니다.\n앱의 납입 체크를 기준으로 쓰게 되며, 다른 점검(지연 미납, 재원 오류 등)은 그대로 남습니다.',ok:'엑셀 대조 끝내기'},()=>{DATA.forEach(x=>{x.excelProg=null;x.generated=false});toast('엑셀 대조 점검을 껐습니다.');keep(check)});
  if(a==='afilter'){S.afilter=el.dataset.k;return go()}
  if(a==='addOut'){S.outDraft=true;S.ff=null;return keep(detail)}
+ if(a==='othAdd'){S.othDraft=true;return keep(detail)}
+ if(a==='othCancel'){S.othDraft=false;return keep(detail)}
+ if(a==='othSave'){const amt=Math.round(+($('othAmt')||{}).value),dt=($('othDate')||{}).value||'',nt=(($('othNote')||{}).value||'').trim();if(!(amt>0))return toast('금액을 입력해 주세요.',true);if(/\d{6,}/.test(nt))return toast('메모에 긴 숫자(계좌번호 등)는 넣을 수 없습니다.',true);m.others=[...(m.others||[]),{amt,date:dt,note:nt}];S.othDraft=false;return keep(detail)}
+ if(a==='othDel'){const k=+el.dataset.k;m.others=(m.others||[]).filter((_,i)=>i!==k);return keep(detail)}
  if(a==='cancelOut'){S.outDraft=false;return keep(detail)}
  if(a==='pickN'){const u=selOut(m);if(!u||u.f.done)return;const {x,f}=u,n=+el.dataset.n;fUnapply(x,f);if(!S.pickEnd||f.n1==null){f.n1=f.n2=n;S.pickEnd=true}else{if(n<+f.n1){f.n2=f.n1;f.n1=n}else f.n2=n;S.pickEnd=false}fApply(x,f);return keep(detail)}
  if(a==='outDone'){const u=outsOf(m)[+el.dataset.uk];if(!u)return;const {x,f}=u,ins=fIns(x,f);if(f.date>todayS)return toast('납입일이 지난 뒤에 확인할 수 있습니다.',true);if(!ins.length)return toast('회차 범위를 확인해 주세요.',true);
