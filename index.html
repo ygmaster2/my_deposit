@@ -286,17 +286,18 @@ const appliedRate=m=>rateBy(m,perkMet),fixRate=appliedRate,expRate=m=>rateBy(m,p
 const autoShort=m=>m.perks.some(p=>p.mode==='auto'&&!perkMet(m,p)&&perkExp(m,p));
 const maxRate=m=>Math.round((m.baseRate+m.perks.reduce((s,p)=>s+(+p.add||0),0))*1000)/1000;
 const f10=x=>Math.floor(x/10+1e-9)*10;
-function taxOf(g,t){const k=t||'일반과세';if(k==='비과세')return 0;if(k==='세금우대')return f10(g*0.014);const it=f10(g*0.14);return it+f10(it*0.1)}
+const tpct=p=>p==null||p===''||isNaN(+p)?1.4:+p;
+function taxOf(g,t,pct){const k=t||'일반과세';if(k==='비과세')return 0;if(k==='세금우대')return f10(g*tpct(pct)/100);const it=f10(g*0.14);return it+f10(it*0.1)}
 function calc(m,rt){const rate=rt!=null?rt:appliedRate(m),n=termN(m);let principal,gross;
  if(m.kind==='예금'){principal=m.amount;gross=m.amount*rate/100*n/12}else{principal=m.amount*n;gross=m.amount*n*(n+1)/2*rate/100/12}
- const tax=taxOf(gross,m.taxType),net=gross-tax;return{rate,principal,gross,tax,net,total:principal+net}}
+ const tax=taxOf(gross,m.taxType,m.taxRate),net=gross-tax;return{rate,principal,gross,tax,net,total:principal+net}}
 const mat=m=>m.actualMaturity!=null?m.actualMaturity:calc(m).total;
-function grossFromNet(net,t){const r=TAX[t]??0.154,est=net/(1-r);if(t==='비과세'||net<=0)return net;
- let best=null;for(let g=Math.max(0,Math.floor(est)-40);g<=Math.ceil(est)+40;g++){if(g-taxOf(g,t)===net&&(best===null||Math.abs(g-est)<Math.abs(best-est)))best=g}
+function grossFromNet(net,t,pct){const r=t==='세금우대'?tpct(pct)/100:(TAX[t]??0.154),est=net/(1-r);if(t==='비과세'||net<=0)return net;
+ let best=null;for(let g=Math.max(0,Math.floor(est)-40);g<=Math.ceil(est)+40;g++){if(g-taxOf(g,t,pct)===net&&(best===null||Math.abs(g-est)<Math.abs(best-est)))best=g}
  return best!==null?best:Math.round(est)}
 function grossOf(m){const c=calc(m);
  if(m.actualGross!=null)return{v:+m.actualGross,src:'실제'};
- if(m.actualMaturity!=null){return{v:grossFromNet(Math.max(0,Math.round(m.actualMaturity-c.principal)),m.taxType),src:'역산'}}
+ if(m.actualMaturity!=null){return{v:grossFromNet(Math.max(0,Math.round(m.actualMaturity-c.principal)),m.taxType,m.taxRate),src:'역산'}}
  return{v:c.gross,src:'계산'}}
 const incDate=m=>m.closedOn||m.end,incYear=m=>incDate(m).slice(0,4);
 const srcPill=g=>g.src==='실제'?'':` <span class="pill" title="${g.src==='역산'?'실제 만기금액에서 거꾸로 계산한 값':'이율로 계산한 예상값'}">${g.src}</span>`;
@@ -469,7 +470,7 @@ function detail(){const m=get(S.sel);if(!m){S.view='list';return go()}
  <div class="note">가입일(첫 납입일)과 기간을 넣으면 매월 같은 날짜로 회차가 만들어지고, 날짜가 없는 달은 말일로 잡습니다. 가입일이나 기간을 바꾸면 회차가 다시 만들어집니다.</div>
  <button class="btn sm" data-a="dup" style="margin-top:10px">같은 조건으로 복제</button> <button class="btn danger sm" data-a="del" style="margin-top:10px">이 항목 삭제</button></div>
 
- <div class="box sec" data-sec="info"><h3>금리와 우대 조건</h3><div class="form"><label>기본금리(%)</label>${inp('baseRate',m.baseRate,'num')}<label>세금</label><select data-f="taxType" data-t="text">${Object.keys(TAX).map(k=>`<option ${k===m.taxType?'selected':''}>${k}</option>`).join('')}</select>
+ <div class="box sec" data-sec="info"><h3>금리와 우대 조건</h3><div class="form"><label>기본금리(%)</label>${inp('baseRate',m.baseRate,'num')}<label>세금</label><select data-f="taxType" data-t="text">${Object.keys(TAX).map(k=>`<option ${k===m.taxType?'selected':''}>${k}</option>`).join('')}</select>${m.taxType==='세금우대'?`<label>세금우대 세율(%)</label><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${inp('taxRate',m.taxRate??1.4,'num','step="0.1" min="0" max="50" style="width:90px"')} ${[1.4,5,9].map(v=>`<button class="btn sm" data-a="taxPreset" data-v="${v}">${v}%</button>`).join(' ')}<span class="sub">은행 안내 세율을 입력하세요</span></div>`:''}
  ${hasAuto(m)?`<label>자동이체 횟수</label><div style="padding:6px 2px"><b>${autoN(m)}회</b> <span class="sub">· 회차 탭의 자동이체 체크로 계산</span></div>`:''}</div>
  <div style="margin-top:10px">${m.perks.map((p,k)=>`<div class="perk"><input type="checkbox" data-p="${k}" data-pf="checked" ${perkMet(m,p)?'checked':''} ${p.mode==='auto'?'disabled title="회차 탭에서 체크한 자동이체 횟수로 판단"':''}><input data-p="${k}" data-pf="name" data-t="text" value="${esc(p.name)}"><input data-p="${k}" data-pf="add" data-t="num" value="${p.add}" title="가산 금리(%p)"><button class="btn sm" data-a="delPerk" data-k="${k}">삭제</button></div>${p.mode==='auto'?`<div class="note" style="margin:-4px 0 6px 24px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">총 ${termN(m)}회 중 <input data-p="${k}" data-pf="need" data-t="int" value="${needOf(m,p)}" style="width:56px" title="필요한 자동이체 횟수">회 이상 자동이체 필요 · 현재 <b>${autoN(m)}회</b> ${perkMet(m,p)?'<span class="pill ok">충족</span>':perkExp(m,p)?`<span class="pill warn">미달성 · 자동이체 ${needOf(m,p)-autoN(m)}회 더 필요 (남은 ${autoLeft(m)}회 중)</span>`:'<span class="pill bad">달성 불가</span>'}</div>`:''}`).join('')||'<div class="sub">등록된 우대 조건이 없습니다.</div>'}
  <button class="btn sm" data-a="addPerk">+ 직접 체크 조건</button> ${m.kind==='적금'?'<button class="btn sm" data-a="addAuto">+ 자동이체 횟수 조건</button>':''}</div>
@@ -615,6 +616,7 @@ document.addEventListener('change',e=>{const el=e.target,m=get(S.sel);
   else if(t==='num'){v=parseFloat(v);if(isNaN(v))v=0}else if(t==='int'){v=parseInt(v)||0}else if(t==='chk'){v=el.checked}else if(t==='date'){v=v||null}
   if(f==='amount'&&v===null)v=0;
   if(f==='start'||f==='term'){if(f==='start'&&!v)return;if(f==='term'&&v<1)return toast('기간은 1개월 이상이어야 합니다.',true);if(m.kind==='예금'){m[f]=v;m.end=addM(m.start,termN(m));return keep(detail)}return regen(m,()=>{m[f]=v})}
+  if(f==='taxRate')v=Math.min(50,Math.max(0,v));
   m[f]=v;keep(detail);return}
  if(el.dataset.i!==undefined){const i=m.inst[+el.dataset.i];if(el.dataset.if==='auto'){if(S.lock){el.checked=!el.checked;return toast('잠금 중입니다. 위쪽 🔒 버튼을 눌러 해제하세요.',true)}i.auto=el.checked;bump(1);keep(detail);return}if(el.dataset.if==='paid'){if(S.lock&&i.paid){el.checked=true;return toast('잠금 중입니다. 위쪽 🔒 버튼을 눌러 해제하세요.',true)}setPaid(m,i,el.checked);bump(el.checked)}else{if(i.paid)return;i.act=el.value||null}keep(detail);return}
  if(el.dataset.p!==undefined){const p=m.perks[+el.dataset.p],f=el.dataset.pf;if(f==='checked')p.checked=el.checked;else if(f==='add')p.add=parseFloat(el.value)||0;else if(f==='need')p.need=Math.max(0,parseInt(el.value)||0);else p.name=el.value;keep(detail);return}
@@ -658,6 +660,7 @@ document.addEventListener('click',e=>{if(busy)return;const el=e.target.closest('
  if(a==='noteDel'){const id=+el.dataset.nid;return ask({title:'이 메모를 삭제할까요?',body:esc((NOTES.find(n=>n.id===id)||{text:''}).text.slice(0,80)),ok:'삭제',danger:true},()=>{NOTES=NOTES.filter(n=>n.id!==id);persistNotes();go()})}
  if(a==='xlDone')return ask({title:'엑셀 대조를 끝낼까요?',body:'엑셀 진행 표시와 비교하는 점검, 회차를 자동 생성한 항목 점검을 모두 끕니다.\n앱의 납입 체크를 기준으로 쓰게 되며, 다른 점검(지연 미납, 재원 오류 등)은 그대로 남습니다.',ok:'엑셀 대조 끝내기'},()=>{DATA.forEach(x=>{x.excelProg=null;x.generated=false});toast('엑셀 대조 점검을 껐습니다.');keep(check)});
  if(a==='afilter'){S.afilter=el.dataset.k;return go()}
+ if(a==='taxPreset'){m.taxRate=+el.dataset.v;return keep(detail)}
  if(a==='addOut'){S.outDraft=true;S.ff=null;return keep(detail)}
  if(a==='othAdd'){S.othDraft=true;return keep(detail)}
  if(a==='othCancel'){S.othDraft=false;return keep(detail)}
